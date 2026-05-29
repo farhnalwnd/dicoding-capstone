@@ -1,0 +1,20 @@
+{
+  "skills": [
+    "python", "javascript", "typescript", "vue", "react", "angular", "node", "fastapi", "flask", "django",
+    "docker", "kubernetes", "sql", "nosql", "mongodb", "postgresql", "mysql", "git", "nlp",
+    "machine learning", "deep learning", "data science", "java", "c++", "c#", "aws", "cloud",
+    "gcp", "azure", "html", "css", "sass", "tailwind", "linux", "bash", "rest api", "graphql",
+    "tensorflow", "pytorch", "scikit-learn", "pandas", "numpy", "spark", "hadoop", "kafka",
+    "rabbitmq", "redis", "elasticsearch", "jenkins", "terraform", "ansible", "agile", "scrum"
+  ],
+  "experience_patterns": [
+    "\\b(\\d+\\+?\\s*(years?|yrs?)\\s*(of\\s*)?experience)\\b",
+    "\\b(experience\\b.*?years?)\\b",
+    "\\b(worked\\s*as|developer|engineer|manager|analyst|intern|lead|senior|junior|staff)\\b",
+    "\\b(project\\s*management|team\\s*lead|technical\\s*lead)\\b"
+  ],
+  "education_patterns": [
+    "\\b(bachelor|master|phd|degree|university|college|diploma|computer science|engineering|science|mathematics|statistics)\\b",
+    "\\b(sarjana|magister|doktor|s1|s2|s3)\\b"
+  ]
+}
