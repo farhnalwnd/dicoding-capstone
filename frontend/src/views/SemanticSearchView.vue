@@ -14,15 +14,17 @@
     
     <div v-if="results.length" class="results">
       <h3>Top Matches Based on your CV</h3>
-      <div class="job-list">
-        <div v-for="(job, index) in results" :key="job.url" class="job-card">
-          <div class="job-rank">#{{ index + 1 }}</div>
-          <div class="job-details">
-            <a :href="job.url" target="_blank" class="job-title">{{ job.title }}</a>
-            <div class="job-company">{{ job.company }} • {{ job.location }}</div>
-          </div>
-          <div class="job-score">{{ job.score }}% match</div>
-        </div>
+      <div class="job-grid">
+        <JobCard
+          v-for="(job, index) in results"
+          :key="job.url"
+          :rank="index + 1"
+          :title="job.title"
+          :company="job.company"
+          :location="job.location"
+          :score="job.score"
+          :url="job.url"
+        />
       </div>
     </div>
   </div>
@@ -31,6 +33,7 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
+import JobCard from '../components/JobCard.vue'
 
 const selectedFile = ref(null)
 const loading = ref(false)
@@ -60,3 +63,18 @@ const searchJobs = async () => {
   loading.value = false
 }
 </script>
+
+<style scoped>
+.job-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .job-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+</style>

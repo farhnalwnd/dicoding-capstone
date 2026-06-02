@@ -271,7 +271,7 @@ body {
 .main-content {
   flex: 1;
   padding: 2.5rem 2rem;
-  max-width: 1400px;
+  max-width: 100%;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -293,7 +293,6 @@ body {
 }
 
 .view-container {
-  max-width: 900px;
   margin: 0 auto;
   padding: 3rem;
 }

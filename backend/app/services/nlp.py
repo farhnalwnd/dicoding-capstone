@@ -6,7 +6,8 @@ from typing import List, Dict, Any, Tuple
 import numpy as np
 
 # Load model once on startup
-model = SentenceTransformer('all-MiniLM-L6-v2')
+MODEL_USED = os.getenv("MODEL_MAIN", "all-MiniLM-L6-v2")
+model = SentenceTransformer(MODEL_USED)
 
 # Standard skills for hybrid matching (20% weight)
 STANDARD_SKILLS = [
