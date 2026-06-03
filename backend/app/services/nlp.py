@@ -9,18 +9,17 @@ import numpy as np
 MODEL_USED = os.getenv("MODEL_MAIN")
 model = SentenceTransformer(MODEL_USED)
 
-# Standard skills for hybrid matching (20% weight)
-STANDARD_SKILLS = [
-    "Python", "JavaScript", "TypeScript", "Vue.js", "React", "Angular", "Node.js", "FastAPI", "Flask", "Django",
-    "Docker", "Kubernetes", "SQL", "PostgreSQL", "MySQL", "MongoDB", "Git", "NLP", "Machine Learning", "Deep Learning",
-    "AWS", "GCP", "Azure", "Tailwind CSS", "HTML", "CSS", "Java", "C++", "C#", "Linux", "Bash", "REST API", "GraphQL",
-    "TensorFlow", "PyTorch", "Scikit-Learn", "Pandas", "NumPy", "Apache Spark", "Hadoop", "Kafka", "RabbitMQ", "Redis",
-    "Elasticsearch", "CI/CD", "Jenkins", "Terraform", "Ansible", "Agile", "Scrum", "Next.js", "Express.js"
-]
+# Standard skills cache for dynamic domains
+_skills_embeddings_cache = {}
 
-STANDARD_SKILLS_EMBEDDINGS = {
-    skill: model.encode(skill, convert_to_tensor=True) for skill in STANDARD_SKILLS
-}
+def get_skill_embeddings_for_skills(skills: List[str]):
+    embeddings = {}
+    for skill in skills:
+        if skill not in _skills_embeddings_cache:
+            _skills_embeddings_cache[skill] = model.encode(skill, convert_to_tensor=True)
+        embeddings[skill] = _skills_embeddings_cache[skill]
+    return embeddings
+
 
 def get_similarity_score(text1: str, text2: str) -> float:
     emb1 = model.encode(text1, convert_to_tensor=True)
@@ -59,12 +58,20 @@ def extract_phrases(text: str) -> List[str]:
     valid_phrases = list(set([p for p in valid_phrases if 3 < len(p) < 100]))
     return valid_phrases
 
-def match_cv_jd_hybrid(cv_text: str, jd_text: str) -> Tuple[List[str], List[str]]:
+def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str = "general") -> Tuple[List[str], List[str]]:
     """
     Hybrid semantic matching with 2 stages:
     - Stage 1 (80%): Direct CV phrases vs JD phrases comparison
     - Stage 2 (20%): CV phrases vs Master Skills comparison
     """
+    from app.core.domain_loader import load_domain_config
+    
+    # Load domain configuration
+    config = load_domain_config(domain)
+    domain_skills = config.get("skills", [])
+    threshold_direct = config.get("threshold_direct_match", 0.75)
+    threshold_master = config.get("threshold_master_match", 0.82)
+    
     cv_phrases = extract_phrases(cv_text)
     jd_phrases = extract_phrases(jd_text)
     
@@ -84,14 +91,16 @@ def match_cv_jd_hybrid(cv_text: str, jd_text: str) -> Tuple[List[str], List[str]
         similarities = util.cos_sim(jd_emb, cv_embeddings)[0]
         max_sim = similarities.max().item()
         
-        if max_sim > 0.75:  # High similarity threshold for direct matching
+        if max_sim > threshold_direct:  # Dynamic threshold
             matched_from_jd[jd_phrase] = max_sim * 0.8  # 80% weight
         else:
             missing_from_jd[jd_phrase] = max_sim * 0.8
     
-    # Stage 2: CV vs Master Skills (20% weight)
+    # Stage 2: CV vs Domain Skills (20% weight)
     matched_from_master = {}
-    for skill_name, skill_emb in STANDARD_SKILLS_EMBEDDINGS.items():
+    domain_skill_embeddings = get_skill_embeddings_for_skills(domain_skills)
+    
+    for skill_name, skill_emb in domain_skill_embeddings.items():
         # Check if skill exists in CV
         cv_similarities = util.cos_sim(skill_emb, cv_embeddings)[0]
         cv_max_sim = cv_similarities.max().item()
@@ -100,10 +109,10 @@ def match_cv_jd_hybrid(cv_text: str, jd_text: str) -> Tuple[List[str], List[str]
         jd_similarities = util.cos_sim(skill_emb, jd_embeddings)[0]
         jd_max_sim = jd_similarities.max().item()
         
-        if cv_max_sim > 0.82 and jd_max_sim > 0.82:
+        if cv_max_sim > threshold_master and jd_max_sim > threshold_master:
             # Skill found in both CV and JD
             matched_from_master[skill_name] = min(cv_max_sim, jd_max_sim) * 0.2  # 20% weight
-        elif jd_max_sim > 0.82 and cv_max_sim <= 0.82:
+        elif jd_max_sim > threshold_master and cv_max_sim <= threshold_master:
             # Skill required in JD but missing in CV
             missing_from_jd[skill_name] = jd_max_sim * 0.2
     

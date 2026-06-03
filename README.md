@@ -32,7 +32,20 @@ A web-based application for CV Summarization, Job Matching, and Talent Analytics
 │   │   │   ├── hr_endpoints.py    # HR APIs (rank, cluster)
 │   │   │   └── jobs_endpoints.py  # Jobs operations
 │   │   ├── core/
-│   │   │   └── mongodb.py         # MongoDB connection helper
+│   │   │   ├── domain_loader.py   # Dynamic domain config loader
+│   │   │   ├── mongodb.py         # MongoDB connection helper
+│   │   │   └── skills/            # Domain-specific JSON configs
+│   │   │       ├── it.json
+│   │   │       ├── hr.json
+│   │   │       ├── finance.json
+│   │   │       ├── creative.json
+│   │   │       ├── sales.json
+│   │   │       ├── legal.json
+│   │   │       ├── pr.json
+│   │   │       ├── ga.json
+│   │   │       ├── cs.json
+│   │   │       ├── operational.json
+│   │   │       └── general.json
 │   │   ├── services/
 │   │   │   ├── linkedin_scraper.py# BeautifulSoup job scraper
 │   │   │   ├── nlp.py             # NLP match, search, clustering logic
@@ -49,6 +62,20 @@ A web-based application for CV Summarization, Job Matching, and Talent Analytics
 │   │   └── main.js                # App entrypoint
 │   ├── Dockerfile
 │   └── package.json
+├── training/
+│   ├── scripts/
+│   │   ├── generate_dataset.py    # Synthetic data generator
+│   │   ├── train_bi_encoder.py    # Bi-Encoder training script
+│   │   └── train_cross_encoder.py # Cross-Encoder training script
+│   ├── templates/
+│   │   ├── anchor_templates.json  # Job description templates
+│   │   ├── positive_templates.json# Matching CV templates
+│   │   └── negative_templates.json# Non-matching CV templates
+│   └── notebooks/
+│       └── finetuning-model.ipynb # Training orchestrator
+├── data/
+│   └── training/                  # Generated CSV datasets
+├── models/                        # Fine-tuned model outputs
 ├── .env.example                   # Env template
 └── docker-compose.yml             # Orchestration file
 ```
@@ -114,3 +141,131 @@ Once Docker Compose is running, access the services using the following URLs:
 - **POST `/api/hr/cluster`**: Perform cluster analysis on candidate CVs.
 - **GET `/api/jobs`**: Fetch jobs stored in MongoDB.
 - **DELETE `/api/jobs/clear`**: Clear all jobs from MongoDB.
+
+---
+
+## Dataset & Customization
+
+### Training Dataset
+
+The project uses synthetic training data generated from domain-specific templates and skill configurations. Datasets are stored in `data/training/` as CSV files.
+
+**File Structure:**
+```
+data/training/
+├── bi_encoder_train.csv      # Triplet data (anchor, positive, negative)
+├── cross_encoder_train.csv   # Pairs data (cv_text, jd_text, label)
+└── README.md                 # Dataset format documentation
+```
+
+### Domain Configurations
+
+Each domain has its own JSON configuration file in `backend/app/core/skills/`. These files define skills, roles, thresholds, and other domain-specific data.
+
+**Available Domains:**
+| File | Domain | Threshold (Direct) | Threshold (Master) |
+|------|--------|-------------------|-------------------|
+| `it.json` | IT | 0.80 | 0.82 |
+| `hr.json` | HR | 0.75 | 0.77 |
+| `finance.json` | Finance | 0.75 | 0.77 |
+| `creative.json` | Creative & Marketing | 0.70 | 0.72 |
+| `sales.json` | Sales & Business Development | 0.70 | 0.72 |
+| `legal.json` | Legal | 0.78 | 0.80 |
+| `pr.json` | PR & Corcom | 0.72 | 0.74 |
+| `ga.json` | GA | 0.70 | 0.72 |
+| `cs.json` | CS & Aftersales | 0.70 | 0.72 |
+| `operational.json` | Operational | 0.73 | 0.75 |
+| `general.json` | General (Default) | 0.75 | 0.77 |
+
+### Customizing Domain Skills
+
+To add or modify skills for a specific domain, edit the corresponding JSON file in `backend/app/core/skills/`.
+
+**Example: Adding a skill to `it.json`:**
+
+```json
+{
+  "domain": "IT",
+  "skills": [
+    "Python", "JavaScript", "Docker", "Kubernetes",
+    "Rust", "Go", "Terraform"
+  ],
+  "roles": [
+    "Backend Engineer", "DevOps Engineer", "Site Reliability Engineer"
+  ],
+  "projects": [
+    "REST API development", "CI/CD pipeline setup"
+  ]
+}
+```
+
+**Available Fields per Domain:**
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `skills` | `string[]` | Core competencies for the domain | `["Python", "Docker", "SQL"]` |
+| `roles` | `string[]` | Job titles specific to the domain | `["Backend Engineer", "DevOps"]` |
+| `teams` | `string[]` | Department/team names | `["Engineering", "Data Science"]` |
+| `projects` | `string[]` | Domain-specific project types | `["API development", "migration"]` |
+| `unrelated_industries` | `string[]` | Industries unrelated to domain | `["Farming", "Mining"]` |
+| `unrelated_roles` | `string[]` | Roles from other domains | `["Graphic Designer", "Accountant"]` |
+| `unrelated_tools` | `string[]` | Tools not used in this domain | `["Photoshop", "AutoCAD"]` |
+| `experience_keywords` | `string[]` | Phrases indicating experience | `["years of experience"]` |
+| `education_keywords` | `string[]` | Education-related terms | `["bachelor", "computer science"]` |
+| `threshold_direct_match` | `float` | Similarity threshold for direct matching | `0.80` |
+| `threshold_master_match` | `float` | Similarity threshold for master skill matching | `0.82` |
+
+### Customizing Templates
+
+Templates control how synthetic training data is generated. They are located in `training/templates/`.
+
+**Template Files:**
+| File | Purpose | Example |
+|------|---------|---------|
+| `anchor_templates.json` | Job description templates | `"Dibutuhkan {role} yang menguasai {skill}"` |
+| `positive_templates.json` | Matching CV templates | `"Pengalaman {years} tahun menggunakan {skill}"` |
+| `negative_templates.json` | Non-matching CV templates | `"Keahlian {skill_unrelated} untuk {role_unrelated}"` |
+
+**Available Placeholders:**
+
+| Placeholder | Source | Description |
+|-------------|--------|-------------|
+| `{skill}` | Domain `skills` array | Random skill from current domain |
+| `{skill1}`, `{skill2}` | Domain `skills` array | Multiple skills |
+| `{role}` | Domain `roles` array | Random role from current domain |
+| `{years}` | Global | Random experience years |
+| `{company}` | Global | Random company name |
+| `{project}` | Domain `projects` array | Domain-specific project |
+| `{skill_unrelated}` | Other domain's `skills` | Skill from different domain |
+| `{role_unrelated}` | Domain `unrelated_roles` | Unrelated role |
+| `{industry_unrelated}` | Domain `unrelated_industries` | Unrelated industry |
+| `{tool_unrelated}` | Domain `unrelated_tools` | Unrelated tool |
+
+**Example: Adding a template to `it.json`:**
+
+```json
+{
+  "it": [
+    "Dibutuhkan {role} yang menguasai {skill}",
+    "We are looking for a {role} skilled in {skill}",
+    "Minimal {years} tahun pengalaman di {skill} dan {skill2}",
+    "Hiring {role} for {team} team - expert in {skill}"
+  ]
+}
+```
+
+### Generating Datasets
+
+After customizing domains and templates, regenerate the training dataset:
+
+```bash
+# Generate 2000 triplets and 2000 pairs
+python training/scripts/generate_dataset.py \
+  --num_triplets 2000 \
+  --num_pairs 2000
+```
+
+Or use the Jupyter notebook:
+```bash
+jupyter notebook training/notebooks/finetuning-model.ipynb
+```

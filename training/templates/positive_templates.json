@@ -1,0 +1,80 @@
+{
+  "it": [
+    "Pengalaman {years} tahun menggunakan {skill} di {company}",
+    "Developed {project} using {skill} at {company}",
+    "Sertifikasi resmi {skill} dari {provider}",
+    "Menguasai {skill1}, {skill2}, dan {skill3}",
+    "Telah menyelesaikan {project_count} proyek menggunakan {skill}",
+    "Bekerja sebagai {role} di {company} menggunakan {skill} untuk development"
+  ],
+  "hr": [
+    "Experienced in {skill} for {years} years at {company}",
+    "Mengelola rekrutmen karyawan baru dengan {skill}",
+    "Berhasil menyusun program {skill} di {company}",
+    "Memiliki pemahaman mendalam tentang {skill}",
+    "Bekerja sebagai {role} menangani {skill}"
+  ],
+  "creative": [
+    "Menguasai {skill} untuk merancang media promosi di {company}",
+    "Designed multiple branding projects using {skill}",
+    "Pengalaman {years} tahun membuat aset visual dengan {skill}",
+    "Mahir menggunakan {skill1} dan {skill2} untuk desain grafis",
+    "Bekerja sebagai {role} kreatif di {company}"
+  ],
+  "finance": [
+    "Mengelola budget tahunan dan audit keuangan menggunakan {skill}",
+    "Experienced in financial reporting and {skill} at {company}",
+    "Pengalaman {years} tahun sebagai akuntan dengan keahlian {skill}",
+    "Menyusun laporan perpajakan perusahaan menggunakan {skill}",
+    "Bekerja sebagai {role} keuangan di {company}"
+  ],
+  "sales": [
+    "Meningkatkan revenue perusahaan sebesar 20% lewat strategi {skill}",
+    "Proven experience in business development and {skill} at {company}",
+    "Pengalaman {years} tahun melakukan {skill} dan closing deal",
+    "Mahir mengoperasikan CRM untuk pipeline {skill}",
+    "Bekerja sebagai {role} sales di {company}"
+  ],
+  "legal": [
+    "Membuat draf perjanjian kerja sama dan review {skill} di {company}",
+    "Experienced corporate lawyer with {years} years in {skill}",
+    "Mengurus perizinan dan kepatuhan hukum perusahaan terkait {skill}",
+    "Memiliki pemahaman kuat tentang regulasi {skill}",
+    "Bekerja sebagai {role} legal di {company}"
+  ],
+  "pr": [
+    "Mengelola hubungan media dan menulis press release menggunakan {skill}",
+    "Experienced PR specialist with {years} years in {skill} at {company}",
+    "Berhasil menangani krisis komunikasi perusahaan lewat {skill}",
+    "Merancang kampanye hubungan masyarakat dengan {skill}",
+    "Bekerja sebagai {role} PR di {company}"
+  ],
+  "ga": [
+    "Mengelola inventaris kantor dan pengadaan barang menggunakan {skill}",
+    "Experienced general affairs officer with {years} years in {skill}",
+    "Mengoordinasikan perbaikan fasilitas dan maintenance dengan {skill}",
+    "Mengurus perizinan operasional kantor lewat {skill}",
+    "Bekerja sebagai {role} GA di {company}"
+  ],
+  "cs": [
+    "Menangani komplain pelanggan dan meningkatkan kepuasan menggunakan {skill}",
+    "Experienced customer service agent with {years} years in {skill}",
+    "Mahir menggunakan tools ticketing dan live chat untuk {skill}",
+    "Memberikan solusi cepat untuk keluhan pelanggan dengan {skill}",
+    "Bekerja sebagai {role} CS di {company}"
+  ],
+  "operational": [
+    "Mengoptimalkan efisiensi supply chain dan logistik lewat {skill}",
+    "Experienced operations specialist with {years} years in {skill}",
+    "Mengoordinasikan proses operasional harian perusahaan dengan {skill}",
+    "Mengurangi biaya operasional gudang menggunakan {skill}",
+    "Bekerja sebagai {role} operasional di {company}"
+  ],
+  "general": [
+    "Memiliki kemampuan komunikasi yang baik dan menguasai {skill}",
+    "Experienced staff with {years} years in {skill} at {company}",
+    "Mampu bekerja secara mandiri maupun dalam tim menggunakan {skill}",
+    "Membantu operasional kantor sehari-hari dengan {skill}",
+    "Bekerja sebagai {role} di {company}"
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "it": [
+    "Dibutuhkan {role} yang menguasai {skill}",
+    "We are looking for a {role} skilled in {skill}",
+    "Minimal {years} tahun pengalaman kerja di {skill}",
+    "Dicari {role} dengan keahlian {skill1} dan {skill2}",
+    "Hiring {role} - expert in {skill}",
+    "Startup seeking {role} for {team} team with {skill} background"
+  ],
+  "hr": [
+    "Mencari {role} berpengalaman dalam {skill}",
+    "HR department is hiring a {role} with {skill} expertise",
+    "Dibutuhkan staff {role} - minimal {years} tahun di {skill}",
+    "We need an experienced {role} specializing in {skill}",
+    "Mencari {role} untuk mengelola {skill}"
+  ],
+  "creative": [
+    "Dibutuhkan {role} kreatif yang mahir {skill}",
+    "We are hiring a creative {role} with strong skills in {skill}",
+    "Dicari {role} untuk portfolio {skill1} dan {skill2}",
+    "Hiring digital {role} experienced in {skill}",
+    "Lowongan kerja {role} dengan skill {skill}"
+  ],
+  "finance": [
+    "Dibutuhkan {role} untuk tim keuangan dengan keahlian {skill}",
+    "Hiring {role} experienced in {skill} and budgeting",
+    "Mencari staf {role} - paham tentang {skill}",
+    "Looking for a financial {role} skilled in {skill}",
+    "Dicari {role} berpengalaman di {skill}"
+  ],
+  "sales": [
+    "Dibutuhkan {role} handal untuk meningkatkan sales dengan {skill}",
+    "We are hiring a {role} with proven track record in {skill}",
+    "Mencari {role} - minimal {years} tahun di {skill}",
+    "Looking for a results-driven {role} skilled in {skill}",
+    "Lowongan {role} untuk mengelola {skill}"
+  ],
+  "legal": [
+    "Dibutuhkan corporate {role} yang menguasai {skill}",
+    "We are hiring a legal {role} with {skill} knowledge",
+    "Mencari staf {role} - berpengalaman {years} tahun di {skill}",
+    "Hiring {role} specializing in {skill} and compliance",
+    "Dicari {role} berpengalaman menangani {skill}"
+  ],
+  "pr": [
+    "Dibutuhkan {role} untuk corporate communication dengan keahlian {skill}",
+    "We are hiring a public relations {role} skilled in {skill}",
+    "Mencari {role} berpengalaman {years} tahun di {skill}",
+    "Hiring {role} to manage media relations and {skill}",
+    "Lowongan {role} dengan keahlian {skill}"
+  ],
+  "ga": [
+    "Dibutuhkan {role} general affairs yang terampil dalam {skill}",
+    "We are hiring a GA {role} experienced in {skill}",
+    "Mencari staf {role} - mengelola asset dan {skill}",
+    "Hiring {role} to coordinate office facilities and {skill}",
+    "Lowongan kerja {role} dengan skill {skill}"
+  ],
+  "cs": [
+    "Dibutuhkan {role} dengan keahlian customer service dan {skill}",
+    "We are hiring a customer support {role} skilled in {skill}",
+    "Mencari staf {role} - berpengalaman {years} tahun di {skill}",
+    "Hiring client support {role} with excellent {skill}",
+    "Lowongan {role} untuk menangani {skill}"
+  ],
+  "operational": [
+    "Dibutuhkan {role} yang berpengalaman dalam {skill}",
+    "We are hiring an operations {role} skilled in {skill}",
+    "Mencari staf {role} - minimal {years} tahun di {skill}",
+    "Hiring operational {role} specializing in {skill}",
+    "Dicari {role} untuk mengelola {skill}"
+  ],
+  "general": [
+    "Mencari staf {role} dengan keahlian {skill}",
+    "We are looking for a staff {role} skilled in {skill}",
+    "Minimal {years} tahun pengalaman kerja dan menguasai {skill}",
+    "Hiring {role} with good {skill}",
+    "Dicari {role} untuk membantu {skill}"
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "it": [
+    "Keahlian {skill_unrelated} untuk posisi {role_unrelated}",
+    "Experienced in {industry_unrelated} with no technical background",
+    "Mahir menggunakan {skill_unrelated} untuk tugas administrasi",
+    "Bekerja sebagai {role_unrelated} di {company} selama {years} tahun",
+    "Tidak memiliki latar belakang pemrograman, fokus pada {skill_unrelated}"
+  ],
+  "hr": [
+    "Mahir menulis kode Python dan mengelola database SQL",
+    "DevOps engineer berpengalaman melakukan setup Kubernetes dan Docker",
+    "Bekerja sebagai {role_unrelated} dengan fokus keahlian {skill_unrelated}",
+    "Desainer visual yang mahir menggambar ilustrasi dengan Photoshop"
+  ],
+  "creative": [
+    "Mengaudit laporan keuangan perusahaan dan mengelola perpajakan",
+    "Experienced backend engineer with strong skills in Python and Django",
+    "Bekerja sebagai {role_unrelated} mengurus administrasi perkantoran",
+    "Ahli hukum yang berpengalaman menyusun draf kontrak bisnis"
+  ],
+  "finance": [
+    "Merancang UI/UX aplikasi mobile menggunakan Figma",
+    "Experienced copywriter specializing in SEO and digital content marketing",
+    "Bekerja sebagai {role_unrelated} mengurus logistik pengiriman barang",
+    "Customer support agent yang melayani komplain pelanggan lewat chat"
+  ],
+  "sales": [
+    "Mengembangkan sistem deteksi wajah menggunakan deep learning",
+    "Experienced software QA engineer with automation testing background",
+    "Bekerja sebagai {role_unrelated} menangani kepatuhan hukum perusahaan",
+    "Desainer interior yang mahir merancang ruang kerja menggunakan AutoCAD"
+  ],
+  "legal": [
+    "Menguasai teknik closing penjualan retail dan door-to-door sales",
+    "Experienced social media marketer managing instagram ad campaigns",
+    "Bekerja sebagai {role_unrelated} mengelola kepegawaian dan BPJS",
+    "Frontend developer yang mahir membangun website responsif dengan React"
+  ],
+  "pr": [
+    "Mengoperasikan forklift dan mengelola inventarisasi gudang",
+    "Experienced payroll specialist handling monthly salary calculation",
+    "Bekerja sebagai {role_unrelated} mengurus jaringan IT kantor",
+    "Teknisi mesin yang bertanggung jawab atas perawatan generator listrik"
+  ],
+  "ga": [
+    "Membuat desain ilustrasi dan komik menggunakan Procreate",
+    "Experienced data scientist building machine learning models for forecasting",
+    "Bekerja sebagai {role_unrelated} mengurus sales B2B perusahaan",
+    "Copywriter yang memproduksi naskah video marketing kreatif"
+  ],
+  "cs": [
+    "Menyusun strategi investasi saham dan analisis pasar keuangan",
+    "Experienced network administrator managing Cisco routers and firewalls",
+    "Bekerja sebagai {role_unrelated} merancang arsitektur microservices",
+    "Pengacara publik yang mendampingi persidangan pidana di pengadilan"
+  ],
+  "operational": [
+    "Merancang kampanye hubungan masyarakat dan rilis berita ke media",
+    "Experienced graphic designer with portfolio in logo design and typography",
+    "Bekerja sebagai {role_unrelated} mengajar kelas pelatihan karyawan baru",
+    "Digital marketer yang mengoptimalkan website menggunakan Google Analytics"
+  ],
+  "general": [
+    "Spesialis keamanan siber yang mendeteksi ancaman malware jaringan",
+    "Experienced tax accountant managing annual tax reporting tasks",
+    "Bekerja sebagai {role_unrelated} mengedit video klip promosi",
+    "Mobile app developer yang mempublikasikan aplikasi Android ke Play Store"
+  ]
+}

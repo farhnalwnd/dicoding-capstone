@@ -1,0 +1,39 @@
+{
+  "domain": "HR",
+  "threshold_direct_match": 0.75,
+  "threshold_master_match": 0.77,
+  "skills": [
+    "Recruitment", "Talent Acquisition", "Onboarding",
+    "Performance Management", "Employee Relations",
+    "Compensation & Benefits", "Training & Development",
+    "HRIS", "SAP SuccessFactors", "Workday",
+    "Labor Law", "Industrial Relations", "Payroll",
+    "Workforce Planning", "Succession Planning",
+    "Diversity & Inclusion", "Employee Engagement",
+    "Exit Interview", "Conflict Resolution", "Coaching"
+  ],
+  "roles": [
+    "HR Manager", "Recruitment Specialist", "Talent Acquisition Lead",
+    "HR Coordinator", "Training Manager", "HR Business Partner"
+  ],
+  "teams": [
+    "Human Resources", "People Operations", "Talent Acquisition", "Learning & Development"
+  ],
+  "projects": [
+    "talent acquisition program", "employee engagement initiative",
+    "performance review system", "training curriculum development",
+    "HRIS implementation", "compensation restructuring",
+    "onboarding workflow", "employee retention strategy"
+  ],
+  "unrelated_industries": ["Tech Startup", "Manufacturing", "Oil & Gas", "Mining"],
+  "unrelated_roles": ["Software Engineer", "Data Scientist", "Network Administrator", "Backend Developer"],
+  "unrelated_tools": ["Docker", "Python", "SQL", "Kubernetes", "React"],
+  "experience_keywords": [
+    "years in HR", "pengalaman di HR",
+    "managing recruitment", "mengelola rekrutmen"
+  ],
+  "education_keywords": [
+    "bachelor", "master", "degree", "sarjana",
+    "psychology", "psikologi", "human resource"
+  ]
+}

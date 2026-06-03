@@ -1,0 +1,34 @@
+{
+  "domain": "Operational",
+  "threshold_direct_match": 0.73,
+  "threshold_master_match": 0.75,
+  "skills": [
+    "Process Management", "Logistics", "Supply Chain", "Inventory Control",
+    "Operational Excellence", "Lean", "Six Sigma", "Project Coordination",
+    "Risk Management", "Quality Assurance", "KPI Monitoring",
+    "Vendor Management", "Scheduling", "Reporting"
+  ],
+  "roles": [
+    "Operations Manager", "Logistics Coordinator", "Supply Chain Analyst",
+    "Warehouse Supervisor", "Quality Assurance Lead"
+  ],
+  "teams": [
+    "Operations", "Logistics", "Supply Chain", "Quality Assurance", "Warehouse"
+  ],
+  "projects": [
+    "supply chain optimization", "inventory management system setup",
+    "lean manufacturing workflow implementation", "warehouse relocation",
+    "logistics network restructuring", "quality assurance program overhaul"
+  ],
+  "unrelated_industries": ["Social Media Marketing", "Creative Media", "Gaming", "Graphic Design"],
+  "unrelated_roles": ["Video Editor", "Graphic Designer", "SEO Specialist", "UI/UX Designer"],
+  "unrelated_tools": ["Photoshop", "Premiere Pro", "Figma", "Canva", "Google Ads"],
+  "experience_keywords": [
+    "years of operational experience", "pengalaman operasional",
+    "process improvement", "perbaikan proses"
+  ],
+  "education_keywords": [
+    "bachelor", "degree", "sarjana", "logistics", "industrial engineering",
+    "manajemen operasi"
+  ]
+}

@@ -10,7 +10,8 @@ router = APIRouter()
 @router.post("/hr/rank")
 async def rank_candidates(
     cvs: List[UploadFile] = File(...),
-    job_description: str = Form(...)
+    job_description: str = Form(...),
+    domain: str = Form("general")
 ):
     candidates = []
     
@@ -21,7 +22,7 @@ async def rank_candidates(
         # Extract candidate name
         candidate_name = extract_candidate_name(cv_text, cv.filename)
         
-        # Calculate similarity score (using simple text comparison for ranking)
+        # Calculate similarity score
         similarity_score = get_similarity_score(cv_text, job_description)
         
         candidates.append({

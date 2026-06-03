@@ -37,20 +37,22 @@ async def scrape_and_recommend(
 @router.post("/match-detailed")
 async def match_cv_to_job_detailed(
     cv: UploadFile = File(...),
-    job_description: str = Form(...)
+    job_description: str = Form(...),
+    domain: str = Form("general")
 ):
     file_bytes = await cv.read()
     cv_text = extract_text(file_bytes, cv.filename)
     
     similarity_score = get_similarity_score(cv_text, job_description)
     
-    # Hybrid semantic matching: 80% CV-JD direct + 20% master skills
-    matched_skills, missing_skills = match_cv_jd_hybrid(cv_text, job_description)
+    # Hybrid semantic matching: 80% CV-JD direct + 20% domain skills
+    matched_skills, missing_skills = match_cv_jd_hybrid(cv_text, job_description, domain)
     
     return {
         "similarity_score": similarity_score,
         "matched_skills": matched_skills,
-        "missing_skills": missing_skills
+        "missing_skills": missing_skills,
+        "domain": domain
     }
 
 @router.post("/jobs/semantic-search")

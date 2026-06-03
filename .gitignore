@@ -2,4 +2,7 @@
 *.md
 !README.md
 !FINETUNING_GUIDE.md
+!ISSUE.md
+!BUG.md
+data/training/*.csv
 .env
