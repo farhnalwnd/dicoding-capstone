@@ -57,12 +57,15 @@ class SyntheticDataGenerator:
         # Replace {skill} placeholders
         if "{skill}" in template:
             template = template.replace("{skill}", random.choice(skills))
-        if "{skill1}" in template and "{skill2}" in template:
+        if "{skill1}" in template or "{skill2}" in template:
             if len(skills) >= 2:
-                skill1, skill2 = random.sample(skills, 2)
+                sampled_skills = random.sample(skills, 2)
             else:
-                skill1 = skill2 = skills[0]
-            template = template.replace("{skill1}", skill1).replace("{skill2}", skill2)
+                sampled_skills = [skills[0], skills[0]]
+            if "{skill1}" in template:
+                template = template.replace("{skill1}", sampled_skills[0])
+            if "{skill2}" in template:
+                template = template.replace("{skill2}", sampled_skills[1])
         if "{skill3}" in template:
             template = template.replace("{skill3}", random.choice(skills))
             
