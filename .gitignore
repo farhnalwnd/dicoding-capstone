@@ -1,4 +1,5 @@
 .opencode/
 *.md
 !README.md
+!FINETUNING_GUIDE.md
 .env
