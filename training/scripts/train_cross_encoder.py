@@ -9,7 +9,7 @@ def main():
     parser.add_argument("--train_csv", type=str, required=True, help="Path to training CSV.")
     parser.add_argument("--eval_csv", type=str, default=None, help="Path to evaluation CSV.")
     parser.add_argument("--output_path", type=str, required=True, help="Path to save the trained model.")
-    parser.add_argument("--base_model", type=str, default="paraphrase-multilingual-MiniLM-L12-v2", help="Base model name.")
+    parser.add_argument("--base_model", type=str, default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", help="Base model name.")
     parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs.")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size.")
     parser.add_argument("--warmup_steps", type=int, default=100, help="Warmup steps.")
@@ -42,11 +42,14 @@ def main():
     
     print("Starting Cross-Encoder training...")
     model.fit(
-        train_objectives=[(train_loader, None)],
+        train_dataloader=train_loader,
         epochs=args.epochs,
         warmup_steps=args.warmup_steps,
         output_path=args.output_path
     )
+    
+    print(f"Saving Cross-Encoder model to {args.output_path}...")
+    model.save(args.output_path)
     
     print(f"Cross-Encoder training complete! Model saved to {args.output_path}")
 

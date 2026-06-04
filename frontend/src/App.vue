@@ -1,57 +1,48 @@
 <template>
-  <div id="app">
-    <!-- Full-width vibrant background decoration -->
-    <div class="bg-gradient-mesh">
-      <div class="mesh-sphere sphere-1"></div>
-      <div class="mesh-sphere sphere-2"></div>
-      <div class="mesh-sphere sphere-3"></div>
-    </div>
-
-    <!-- 100% Screen Width Glassmorphism Navbar -->
-    <nav class="navbar">
-      <div class="nav-container">
-        <div class="nav-brand">
-          <router-link to="/">
-            <span class="brand-text">CV Matcher</span>
-            <span class="brand-accent">Pro</span>
-          </router-link>
+  <div class="app-container">
+    <Toast ref="toast" />
+    <nav class="navbar glass-panel">
+      <div class="nav-brand">
+        <span class="brand-icon">CV</span>
+        <span class="brand-text">CV Matcher Pro</span>
+      </div>
+      
+      <div class="nav-links">
+        <router-link to="/" class="nav-link">Home</router-link>
+        
+        <div class="dropdown">
+          <button class="dropdown-btn">Job Seeker ▾</button>
+          <div class="dropdown-content">
+            <router-link to="/jobseeker/scrape">Scrape Jobs</router-link>
+            <router-link to="/jobseeker/analyze">CV-JD Analysis</router-link>
+            <router-link to="/jobseeker/search">Semantic Search</router-link>
+          </div>
         </div>
         
-        <div class="nav-links">
-          <router-link to="/" class="nav-link">Home</router-link>
-          
-          <!-- Job Seeker Dropdown -->
-          <div class="dropdown">
-            <button class="dropdown-btn">
-              Job Seeker <span class="arrow">▼</span>
-            </button>
-            <div class="dropdown-content glass-panel">
-              <router-link to="/jobseeker/scrape">Scrape Jobs</router-link>
-              <router-link to="/jobseeker/analyze">CV-JD Analysis</router-link>
-              <router-link to="/jobseeker/search">Semantic Search</router-link>
-            </div>
-          </div>
-
-          <!-- HR Dropdown -->
-          <div class="dropdown">
-            <button class="dropdown-btn">
-              HR Panel <span class="arrow">▼</span>
-            </button>
-            <div class="dropdown-content glass-panel">
-              <router-link to="/hr/rank">Bulk CV Ranking</router-link>
-              <router-link to="/hr/cluster">Talent Clustering</router-link>
-            </div>
+        <div class="dropdown">
+          <button class="dropdown-btn">HR Panel ▾</button>
+          <div class="dropdown-content">
+            <router-link to="/hr/rank">Bulk CV Ranking</router-link>
+            <router-link to="/hr/cluster">Talent Clustering</router-link>
           </div>
         </div>
       </div>
     </nav>
-
-    <!-- Main Content Area -->
+    
     <main class="main-content">
-      <router-view></router-view>
+      <router-view />
     </main>
+    
+    <ModelInfoBadge />
   </div>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+import Toast from './components/Toast.vue'
+
+const toast = ref(null)
+</script>
 
 <style>
 /* Design System Variables & Imports */

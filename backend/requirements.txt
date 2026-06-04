@@ -1,10 +1,25 @@
-fastapi
-uvicorn
+# Core web framework
+fastapi==0.115.0
+uvicorn==0.30.0
 python-multipart
-pypdf
-python-docx
-sentence-transformers
-pymongo
-requests
-beautifulsoup4
-scikit-learn
+
+# Document processing
+pypdf==5.1.0
+python-docx==1.1.2
+
+# ML / NLP
+sentence-transformers==3.4.1
+transformers==4.51.3
+torch==2.6.0
+tokenizers==0.21.1
+scikit-learn==1.5.2
+
+# Training dependencies
+accelerate==1.6.0
+datasets==3.5.0
+pandas==2.3.3
+
+# Backend / API
+pymongo==4.10.1
+requests==2.32.3
+beautifulsoup4==4.14.3

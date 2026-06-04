@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form
-from app.services.parser import extract_text
+from app.services.parser import extract_text, clean_text
 from app.services.nlp import get_similarity_score, match_cv_jd_hybrid, model
 from app.services.linkedin_scraper import scrape_linkedin_jobs
 from app.core.mongodb import get_jobs_collection
@@ -38,11 +38,11 @@ async def scrape_and_recommend(
 async def match_cv_to_job_detailed(
     cv: UploadFile = File(...),
     job_description: str = Form(...),
-    domain: str = Form("general")
+    domain: str = Form(...)
 ):
     file_bytes = await cv.read()
     cv_text = extract_text(file_bytes, cv.filename)
-    
+
     similarity_score = get_similarity_score(cv_text, job_description)
     
     # Hybrid semantic matching: 80% CV-JD direct + 20% domain skills

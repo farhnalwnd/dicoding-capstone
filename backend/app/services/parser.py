@@ -4,33 +4,43 @@ from pypdf import PdfReader
 from docx import Document
 
 STOPWORDS = {
-    # English Stopwords + Generic
+    # --- 1. PREPOSISI & KATA HUBUNG STANDARD (English) ---
     "that", "this", "these", "those", "the", "a", "an", "and", "or", "but",
     "for", "with", "from", "into", "through", "during", "before", "after",
-    "above", "below", "between", "various", "many", "some", "any", "each",
-    "every", "both", "few", "more", "most", "other", "another", "such",
-    "degree", "years", "work", "team", "experience", "skill", "ability",
-    "understanding", "knowledge", "working", "strong", "good", "excellent",
-    "basic", "proficient", "familiar", "proven", "demonstrated", "required",
-    "preferred", "plus", "bonus", "role", "job", "position", "candidate",
-    "looking", "seeking", "join", "help", "build", "create", "make", "using",
-    "used", "based", "related", "similar", "equivalent", "including",
+    "above", "below", "between", "of", "to", "in", "on", "at", "by", "as", "and"
     
-    # Indonesian Stopwords
+    # --- 2. PREPOSISI & KATA HUBUNG STANDARD (Indonesian) ---
     "yang", "dan", "di", "ke", "dari", "pada", "dengan", "untuk", "dalam",
     "adalah", "sebagai", "telah", "akan", "dapat", "tidak", "ini", "itu",
     "juga", "atau", "oleh", "seperti", "sehingga", "serta", "saat", "bagi",
-    "kemudian", "namun", "karena", "bisa", "harus", "banyak", "beberapa",
-    "tahun", "pengalaman", "kemampuan", "keahlian", "pemahaman", "bekerja",
-    "baik", "kuat", "dasar", "terbukti", "dibutuhkan", "diutamakan", "nilai",
-    "tambah", "peran", "pekerjaan", "posisi", "kandidat", "mencari", "bergabung",
-    "membantu", "membangun", "membuat", "menggunakan", "berbasis", "terkait",
-    "serupa", "setara", "termasuk"
+    "kemudian", "namun", "karena", "bisa", "harus", "ia", "kami", "saya",
+
+    # --- 3. CV ARTIFACTS & HEADERS (Kata bawaan template dokumen) ---
+    "requirements", "description", "curriculum", "vitae", "resume", "page", 
+    "summary", "profile", "contact", "about", "me", "biodata", "personal",
+    "deskripsi", "persyaratan", "profil", "ringkasan", "tentang", "saya",
+    "halaman", "detail", "details", "information", "informasi",
+
+    # --- 4. CORPORATE CLICHES & BUZZWORDS (Pemanis kalimat yang tidak bernilai) ---
+    "seeking", "looking", "forward", "passionate", "motivated", "dynamic",
+    "results-oriented", "proven", "track", "record", "excellent", "strong",
+    "good", "success", "successful", "highly", "hardworking", "talented",
+    "mencari", "termotivasi", "dinamis", "berorientasi", "hasil", "terbukti",
+    "baik", "sukses", "sangat", "berbakat", "kompeten", "professional",
+
+    # --- 5. SATUAN WAKTU & INFORMASI UMUM (Sering muncul di riwayat kerja) ---
+    "years", "months", "year", "month",
+    "tahun", "bulan", "penuh", "waktu", "magang", "kontrak", "contract",
+    "january", "february", "march", "april", "may", "june", "july", "august", 
+    "september", "october", "november", "december", "present", "current",
+    "sekarang", "saat", "ini"
 }
 
 def clean_text(text: str) -> str:
     """Clean extracted text from noise, excess whitespaces, and common artifacts"""
     # Remove non-alphanumeric characters except basic punctuation
+    text = text.lower()
+    
     text = re.sub(r'[^\w\s.,;:()\-+/#]', ' ', text)
     # Remove multiple spaces/newlines
     text = re.sub(r'\s+', ' ', text)

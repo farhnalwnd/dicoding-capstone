@@ -12,8 +12,25 @@
       <label>Job Description:</label>
       <textarea v-model="jobDescription" placeholder="Paste the job requirements here..." class="input-field textarea" rows="6"></textarea>
     </div>
+
+    <div class="form-group">
+      <label>Domain:</label>
+      <select v-model="domain" class="input-field">
+        <option value="general">General</option>
+        <option value="it">IT</option>
+        <option value="hr">HR</option>
+        <option value="finance">Finance</option>
+        <option value="creative">Creative & Marketing</option>
+        <option value="sales">Sales & Business Development</option>
+        <option value="legal">Legal</option>
+        <option value="pr">PR & Corcom</option>
+        <option value="ga">GA</option>
+        <option value="cs">CS & Aftersales</option>
+        <option value="operational">Operational</option>
+      </select>
+    </div>
     
-    <button @click="matchDetailed" :disabled="loading" class="btn-primary">
+    <button @click="matchDetailed" :disabled="loading || !selectedFile || !jobDescription" class="btn-primary">
       {{ loading ? 'Analyzing...' : 'Analyze Match' }}
     </button>
     
@@ -47,9 +64,11 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
+import { API_BASE_URL } from '../config/api'
 
 const selectedFile = ref(null)
 const jobDescription = ref('')
+const domain = ref('general')
 const loading = ref(false)
 const detailedResult = ref(null)
 
@@ -64,8 +83,9 @@ const matchDetailed = async () => {
   const fd = new FormData()
   fd.append('cv', selectedFile.value)
   fd.append('job_description', jobDescription.value)
+  fd.append('domain', domain.value)
   try {
-    const res = await axios.post('http://localhost:8000/api/match-detailed', fd)
+    const res = await axios.post(`${API_BASE_URL}/api/match-detailed`, fd)
     detailedResult.value = res.data
   } catch (error) {
     console.error(error)

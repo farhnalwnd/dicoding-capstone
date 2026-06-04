@@ -69,10 +69,12 @@ const headers = [
   { text: "Link", value: "url", sortable: false }
 ]
 
+import { API_BASE_URL } from '../config/api'
+
 const fetchJobs = async () => {
   loading.value = true
   try {
-    const res = await axios.get('http://localhost:8000/api/jobs')
+    const res = await axios.get(`${API_BASE_URL}/api/jobs`)
     items.value = res.data.items
     totalItems.value = res.data.total
   } catch (error) {
@@ -90,8 +92,8 @@ const scrapeJobs = async () => {
     fd.append('keyword', keyword.value)
     fd.append('location', location.value)
     fd.append('time_range', timeRange.value)
-    await axios.post('http://localhost:8000/api/scrape-recommend', fd)
-    await fetchJobs() // Refresh table
+    await axios.post(`${API_BASE_URL}/api/scrape-recommend`, fd)
+    await fetchJobs()
   } catch (error) {
     console.error("Failed to scrape", error)
     alert("Failed to scrape jobs")
@@ -104,8 +106,8 @@ const clearDatabase = async () => {
   if (!confirm("Are you sure you want to clear all jobs from the database?")) return
   loading.value = true
   try {
-    await axios.delete('http://localhost:8000/api/jobs/clear')
-    await fetchJobs() // Refresh table
+    await axios.delete(`${API_BASE_URL}/api/jobs/clear`)
+    await fetchJobs()
   } catch (error) {
     console.error("Failed to clear database", error)
     alert("Failed to clear database")

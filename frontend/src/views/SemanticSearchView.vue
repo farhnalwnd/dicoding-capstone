@@ -41,6 +41,8 @@ const results = ref([])
 
 const handleFileSelect = (e) => { selectedFile.value = e.target.files[0] }
 
+import { API_BASE_URL } from '../config/api'
+
 const searchJobs = async () => {
   if (!selectedFile.value) {
     alert("Please select a CV first")
@@ -50,7 +52,7 @@ const searchJobs = async () => {
   try {
     const formData = new FormData()
     formData.append('cv', selectedFile.value)
-    const res = await axios.post('http://localhost:8000/api/jobs/semantic-search', formData, {
+    const res = await axios.post(`${API_BASE_URL}/api/jobs/semantic-search`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

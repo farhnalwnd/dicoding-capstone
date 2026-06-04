@@ -35,6 +35,8 @@ const clusters = ref([])
 
 const handleMultipleFileSelect = (e) => { selectedFiles.value = Array.from(e.target.files) }
 
+import { API_BASE_URL } from '../config/api'
+
 const clusterCandidates = async () => {
   if (!selectedFiles.value.length) {
     alert("Please upload CVs first")
@@ -44,7 +46,7 @@ const clusterCandidates = async () => {
   const fd = new FormData()
   for (let f of selectedFiles.value) fd.append('cvs', f)
   try {
-    const res = await axios.post('http://localhost:8000/api/hr/cluster', fd)
+    const res = await axios.post(`${API_BASE_URL}/api/hr/cluster`, fd)
     clusters.value = res.data
   } catch (error) {
     console.error(error)
