@@ -42,11 +42,14 @@ async def match_cv_to_job_detailed(
 ):
     file_bytes = await cv.read()
     cv_text = extract_text(file_bytes, cv.filename)
-
-    similarity_score = get_similarity_score(cv_text, job_description)
     
-    # Hybrid semantic matching: 80% CV-JD direct + 20% domain skills
-    matched_skills, missing_skills = match_cv_jd_hybrid(cv_text, job_description, domain)
+    # Bersihkan job_description juga (hapus HTML, URL, noise)
+    jd_clean = clean_text(job_description)
+
+    similarity_score = get_similarity_score(cv_text, jd_clean)
+    
+    # Hybrid semantic matching
+    matched_skills, missing_skills = match_cv_jd_hybrid(cv_text, jd_clean, domain)
     
     return {
         "similarity_score": similarity_score,

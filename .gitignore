@@ -4,6 +4,8 @@
 !FINETUNING_GUIDE.md
 !ISSUE.md
 !BUG.md
+!FLOW.md
+!AGENT.md
 data/training/*.csv
 models/bi-encoder-cv-matcher/**/*
 models/cross-encoder-cv-matcher/**/*

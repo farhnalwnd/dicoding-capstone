@@ -43,27 +43,60 @@ def get_similarity_score(text1: str, text2: str) -> float:
 def extract_phrases(text: str) -> List[str]:
     from app.services.parser import STOPWORDS
     
-    phrases = re.split(r'[\n,;\t•|.]', text)
+    # Tambah kurung () [] dan titik dua : ke split regex agar kalimat terpecah dengan baik
+    phrases = re.split(r'[\n,;\t•|.:()\[\]]', text)
     valid_phrases = []
+    
+    # Stopwords tambahan lokal khusus untuk pemecahan frasa di tengah
+    split_conjunctions = {"and", "or", "dan", "atau", "with", "using", "menggunakan", "dengan", "for", "untuk", "in", "di", "on", "pada", "from", "dari", "to", "ke", "by", "as"}
     
     for p in phrases:
         p = p.strip()
         if not p or len(p) <= 2:
             continue
             
-        words = p.split()
-        # Batasi panjang frasa (maksimal 4 kata) untuk menghindari ekstraksi satu kalimat penuh
-        if len(words) > 4:
-            continue
+        # Jika frasa mengandung kata hubung tengah, kita pecah frasa tersebut.
+        sub_candidates = []
+        p_lower = p.lower()
+        if any(f" {w} " in f" {p_lower} " for w in split_conjunctions):
+            # Lakukan pemecahan
+            parts = re.split(r'\b(?:and|or|dan|atau|with|using|menggunakan|dengan|for|untuk|in|di|on|pada|from|dari|to|ke|by|as)\b', p, flags=re.IGNORECASE)
+            for part in parts:
+                part = part.strip()
+                if part:
+                    sub_candidates.append(part)
+        else:
+            sub_candidates.append(p)
+
+        for sub_p in sub_candidates:
+            sub_words = sub_p.split()
+            # Batasi panjang frasa (maksimal 4 kata)
+            if len(sub_words) > 4:
+                continue
+                
+            # Periksa apakah semua kata di dalam frasa adalah stopwords
+            if all(w.lower() in STOPWORDS for w in sub_words):
+                continue
+                
+            # Bersihkan punctuation di awal/akhir frasa
+            p_clean = re.sub(r'^[^\w+#-]+|[^\w+#-]+$', '', sub_p).strip()
             
-        # Periksa apakah semua kata di dalam frasa adalah stopwords
-        if all(w.lower() in STOPWORDS for w in words):
-            continue
+            # Bersihkan ANY stopword di awal dan akhir frasa secara berulang (rekursif)
+            p_words = p_clean.split()
+            changed = True
+            while changed and p_words:
+                changed = False
+                if p_words[0].lower() in STOPWORDS:
+                    p_words = p_words[1:]
+                    changed = True
+                if p_words and p_words[-1].lower() in STOPWORDS:
+                    p_words = p_words[:-1]
+                    changed = True
             
-        # Bersihkan punctuation di awal/akhir frasa
-        p_clean = re.sub(r'^[^\w+#-]+|[^\w+#-]+$', '', p)
-        if len(p_clean) > 2 and not p_clean.lower() in STOPWORDS:
-            valid_phrases.append(p_clean)
+            p_clean = " ".join(p_words).strip()
+            
+            if len(p_clean) > 2 and not p_clean.lower() in STOPWORDS:
+                valid_phrases.append(p_clean)
     
     # Ekstraksi kata tunggal yang sangat mungkin berupa teknologi/spesifik
     words = re.findall(r'\b[a-zA-Z0-9+#.-]{2,20}\b', text)
@@ -72,8 +105,6 @@ def extract_phrases(text: str) -> List[str]:
         if w_lower not in STOPWORDS:
             # 1. Mengandung karakter teknologi khusus (+, #, ., -) seperti C++, C#, Vue.js, CI/CD
             # 2. ATAU merupakan singkatan dengan huruf kapital penuh (SQL, AWS, GCP, IT)
-            # 3. ATAU kata yang memang tidak diawali kapital biasa (untuk menangkap kasus lowercase)
-            #    tapi di sini kita hanya terima jika ia ALL CAPS atau memiliki special char teknologi
             is_tech_char = any(c in w for c in '+#.-')
             is_all_caps = w.isupper() and len(w) >= 2
             

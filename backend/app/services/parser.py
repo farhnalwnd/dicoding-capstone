@@ -72,17 +72,36 @@ STOPWORDS = {
     "solusi", "sistem", "solutions", "system", "systems",
     "reporting", "presentation", "design",
     "terkait", "khusus", "umum", "lain", "lebih",
+    "e.g.", "e.g", "eg", "i.e.", "i.e", "ie", "etc", "dll", "dsb", "wfo", "wfh",
+    "database", "databases", "server", "servers", "js", "web", "app", "application",
+    "applications", "framework", "library", "tool", "tools", "platform", "platforms",
+    "data", "programming", "code", "coding", "software", "hardware", "project", "projects",
 }
 
 def clean_text(text: str) -> str:
-    """Clean extracted text from noise, excess whitespaces, and common artifacts"""
-    # Remove non-alphanumeric characters except basic punctuation
-    text = text.lower()
+    """Clean extracted text from noise, excess whitespaces, HTML tags, and common artifacts while preserving case"""
+    if not text:
+        return ""
+        
+    # 1. Hapus tag HTML jika ada (terutama untuk JD hasil scrape)
+    text = re.sub(r'<[^>]*>', ' ', text)
+
+    # 3. Hapus URL/Links
+    text = re.sub(r'https?://\S+|www\.\S+', ' ', text)
     
-    text = re.sub(r'[^\w\s.,;:()\-+/#]', ' ', text)
-    # Remove multiple spaces/newlines
+    # 4. Hapus Email
+    text = re.sub(r'\S+@\S+', ' ', text)
+    
+    # 5. Hapus Nomor Telepon
+    text = re.sub(r'\+?\d[\d -]{8,15}\d', ' ', text)
+
+    # 6. Hilangkan karakter tidak perlu kecuali tanda baca dasar dan simbol teknologi (+, #, -, /)
+    text = re.sub(r'[^\w\s.,;:\-+/#]', ' ', text)
+    
+    # 7. Bersihkan spasi/newline berlebih
     text = re.sub(r'\s+', ' ', text)
-    # Remove common CV headers/footers
+    
+    # 8. Hilangkan header/footer umum CV (case-insensitive)
     noise_patterns = [
         r'(?i)page\s+\d+\s+of\s+\d+',
         r'(?i)curriculum\s+vitae',
@@ -90,6 +109,7 @@ def clean_text(text: str) -> str:
     ]
     for pattern in noise_patterns:
         text = re.sub(pattern, ' ', text)
+        
     return text.strip()
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
