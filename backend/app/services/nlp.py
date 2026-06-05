@@ -14,12 +14,13 @@ print(f"[NLP] Loading Bi-Encoder from: {MODEL_BI_ENCODER}")
 model = SentenceTransformer(MODEL_BI_ENCODER)
 
 cross_encoder = None
-if MODEL_CROSS_ENCODER:
-    try:
-        print(f"[NLP] Loading Cross-Encoder from: {MODEL_CROSS_ENCODER}")
-        cross_encoder = CrossEncoder(MODEL_CROSS_ENCODER, num_labels=1)
-    except Exception as e:
-        print(f"[NLP] Warning: Could not load Cross-Encoder: {e}")
+# Disable loading Cross-Encoder entirely to save memory and use Bi-Encoder only
+# if MODEL_CROSS_ENCODER:
+#     try:
+#         print(f"[NLP] Loading Cross-Encoder from: {MODEL_CROSS_ENCODER}")
+#         cross_encoder = CrossEncoder(MODEL_CROSS_ENCODER, num_labels=1)
+#     except Exception as e:
+#         print(f"[NLP] Warning: Could not load Cross-Encoder: {e}")
 
 _skills_embeddings_cache = {}
 
@@ -33,21 +34,7 @@ def get_skill_embeddings_for_skills(skills: List[str]):
 
 
 def get_similarity_score(text1: str, text2: str) -> float:
-    USE_CROSS_ENCODER = True
-
-    if USE_CROSS_ENCODER and cross_encoder is not None:
-        try:
-            scores = cross_encoder.predict([[text1, text2]])
-            val = scores
-            while isinstance(val, (list, np.ndarray)):
-                val = val[0]
-            val = float(val)
-            prob = 1.0 / (1.0 + math.exp(-val))
-            return round(prob * 100, 2)
-        except Exception as e:
-            print(f"[NLP] CrossEncoder prediction failed: {e}")
-
-    # Fallback to Bi-Encoder (Cosine Similarity)
+    # Murni menggunakan Bi-Encoder (Cosine Similarity)
     emb1 = model.encode(text1, convert_to_tensor=True)
     emb2 = model.encode(text2, convert_to_tensor=True)
     similarity = util.cos_sim(emb1, emb2).item()
@@ -100,26 +87,24 @@ def extract_phrases(text: str) -> List[str]:
     return valid_phrases
 
 def rerank_with_cross_encoder(cv_text: str, candidates: List[Dict]) -> List[Dict]:
-    """Re-rank candidates using Cross-Encoder for higher precision"""
-    if not cross_encoder or not candidates:
+    """Re-rank candidates using Bi-Encoder cosine similarity since Cross-Encoder is disabled"""
+    if not candidates:
         return candidates
     
     try:
-        pairs = [[cv_text, candidate.get('job_description', candidate.get('description', ''))] 
-                 for candidate in candidates]
-        scores = cross_encoder.predict(pairs)
+        emb_cv = model.encode(cv_text, convert_to_tensor=True)
+        jd_texts = [candidate.get('job_description', candidate.get('description', '')) for candidate in candidates]
+        emb_jds = model.encode(jd_texts, convert_to_tensor=True)
+        
+        similarities = util.cos_sim(emb_cv, emb_jds)[0]
         
         for i, candidate in enumerate(candidates):
-            val = scores[i]
-            while isinstance(val, (list, np.ndarray)):
-                val = val[0]
-            val = float(val)
-            prob = 1.0 / (1.0 + math.exp(-val))
-            candidate['cross_encoder_score'] = round(prob * 100, 2)
-        
+            sim = similarities[i].item()
+            candidate['cross_encoder_score'] = round(max(0.0, min(1.0, sim)) * 100, 2)
+            
         return sorted(candidates, key=lambda x: x['cross_encoder_score'], reverse=True)
     except Exception as e:
-        print(f"[NLP] Cross-Encoder re-ranking failed: {e}")
+        print(f"[NLP] Bi-Encoder re-ranking failed: {e}")
         return candidates
 
 def normalize_skill_name(name: str) -> str:
