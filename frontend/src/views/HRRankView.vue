@@ -21,12 +21,27 @@
       <textarea v-model="jobDescription" placeholder="Paste the job requirements here..." class="input-field textarea" rows="6"></textarea>
     </div>
 
+    <div class="form-group">
+      <label>Domain:</label>
+      <select v-model="domain" class="input-field">
+        <option v-for="option in domainOptions" :key="option.value" :value="option.value">
+          {{ option.label }}
+        </option>
+      </select>
+      <small class="helper-text">
+        Pilih domain agar sistem memakai skill list yang sesuai saat menghitung ranking kandidat.
+      </small>
+    </div>
+
     <button @click="rankCVs" :disabled="loading || !selectedFiles.length || !jobDescription" class="btn-primary">
       {{ loading ? 'Ranking Candidates...' : 'Rank Candidates' }}
     </button>
     
     <div v-if="rankings.length" class="results">
-      <h3>Candidate Rankings</h3>
+      <div class="results-header">
+        <h3>Candidate Rankings</h3>
+        <span class="domain-badge">Domain: {{ selectedDomainLabel }}</span>
+      </div>
       <div class="table-container">
         <table class="ranking-table">
           <thead>
@@ -34,19 +49,31 @@
               <th>Rank</th>
               <th>Candidate Name</th>
               <th>Match Score</th>
+              <th>Semantic</th>
+              <th>Domain Skills</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in rankings" :key="r.name" :class="getScoreClass(r.score)">
+            <tr v-for="r in rankings" :key="r.filename || r.name" :class="getScoreClass(r.score)">
               <td class="rank-col">
                 <span class="rank-badge" :class="getScoreClass(r.score)">#{{ r.rank }}</span>
               </td>
-              <td class="name-col">{{ r.name }}</td>
+              <td class="name-col">
+                <div>{{ r.name }}</div>
+                <small v-if="r.filename" class="filename-text">{{ r.filename }}</small>
+              </td>
               <td class="score-col">
                 <div class="score-bar-container">
                   <div class="score-bar" :class="getScoreClass(r.score)" :style="{ width: r.score + '%' }"></div>
                   <span class="score-text" :class="getScoreClass(r.score)">{{ r.score }}%</span>
                 </div>
+              </td>
+              <td class="metric-col">{{ r.semantic_score ?? '-' }}%</td>
+              <td class="metric-col">
+                <span>{{ r.domain_skill_score ?? '-' }}%</span>
+                <small v-if="r.matched_skills_count !== undefined" class="skill-count-text">
+                  {{ r.matched_skills_count }} matched / {{ r.missing_skills_count }} missing
+                </small>
               </td>
             </tr>
           </tbody>
@@ -57,14 +84,33 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config/api'
 
 const selectedFiles = ref([])
 const jobDescription = ref('')
+const domain = ref('general')
 const loading = ref(false)
 const rankings = ref([])
+
+const domainOptions = [
+  { value: 'general', label: 'General' },
+  { value: 'it', label: 'IT' },
+  { value: 'hr', label: 'HR' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'creative', label: 'Creative & Marketing' },
+  { value: 'sales', label: 'Sales & Business Development' },
+  { value: 'legal', label: 'Legal' },
+  { value: 'pr', label: 'PR & Corcom' },
+  { value: 'ga', label: 'GA' },
+  { value: 'cs', label: 'CS & Aftersales' },
+  { value: 'operational', label: 'Operational' }
+]
+
+const selectedDomainLabel = computed(() => {
+  return domainOptions.find(option => option.value === domain.value)?.label || 'General'
+})
 
 const handleMultipleFileSelect = (e) => {
   const files = Array.from(e.target.files)
@@ -97,6 +143,7 @@ const rankCVs = async () => {
     fd.append('cvs', f)
   }
   fd.append('job_description', jobDescription.value)
+  fd.append('domain', domain.value)
   try {
     const res = await axios.post(`${API_BASE_URL}/api/hr/rank`, fd)
     rankings.value = res.data
@@ -288,5 +335,55 @@ const rankCVs = async () => {
 
 .score-text.score-low {
   color: #DC2626;
+}
+
+.helper-text {
+  display: block;
+  margin-top: 0.35rem;
+  color: #64748B;
+  font-size: 0.85rem;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.domain-badge {
+  background: rgba(3, 105, 161, 0.1);
+  color: #0369A1;
+  border: 1px solid rgba(3, 105, 161, 0.2);
+  border-radius: 9999px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.filename-text,
+.skill-count-text {
+  display: block;
+  margin-top: 0.25rem;
+  color: #64748B;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.metric-col {
+  color: #0C4A6E;
+  font-weight: 700;
+  min-width: 120px;
+}
+
+@media (max-width: 768px) {
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .ranking-table {
+    min-width: 760px;
+  }
 }
 </style>
