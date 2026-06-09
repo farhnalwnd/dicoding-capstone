@@ -136,25 +136,34 @@ onMounted(() => {
 }
 
 .btn-danger {
-  background-color: #EF4444;
+  background: linear-gradient(135deg, #DC2626 0%, #EF4444 52%, #F97316 100%);
   color: white;
-  padding: 1rem;
+  min-height: 48px;
+  padding: 0.88rem 1.35rem;
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: 999px;
+  font-size: 0.98rem;
+  font-weight: 800;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  box-shadow: 0 16px 34px rgba(239, 68, 68, 0.24);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #DC2626;
+  transform: translateY(-2px);
+  filter: saturate(1.08);
 }
 
 .btn-danger:disabled {
-  background-color: #94A3B8;
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.56;
+  box-shadow: none;
+}
+
+@media (max-width: 520px) {
+  .actions {
+    flex-direction: column;
+  }
 }
 
 /* Override vue3-easy-data-table styles to match theme */

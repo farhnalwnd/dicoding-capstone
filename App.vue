@@ -12,7 +12,7 @@
     <nav class="navbar">
       <div class="nav-inner">
         <router-link to="/" class="nav-brand" @click="closeMenus">
-          <img class="brand-icon" src="/icon.svg" alt="CV Matcher Pro logo" />
+          <img class="brand-logo" src="/logo.svg" alt="CV Matcher Pro logo" />
           <span class="brand-text">CV Matcher Pro</span>
         </router-link>
 
@@ -128,14 +128,8 @@ watch(() => route.fullPath, closeMenus)
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --primary: #0284c7;
+  --primary: #0369A1;
   --primary-dark: #075985;
-  --primary-soft: #e0f2fe;
-  --accent: #22d3ee;
-  --accent-2: #6366f1;
-  --success: #10b981;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
   --secondary: #0EA5E9;
   --indigo: #6366F1;
   --purple: #8B5CF6;
@@ -166,10 +160,10 @@ body {
   color: var(--text);
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.14), transparent 30%),
-    radial-gradient(circle at 78% 22%, rgba(99, 102, 241, 0.10), transparent 32%),
-    radial-gradient(circle at 88% 78%, rgba(45, 212, 191, 0.12), transparent 34%),
-    linear-gradient(135deg, #f8fcff 0%, #eef8ff 48%, #f8f5ff 100%);
+    radial-gradient(circle at 8% 12%, rgba(14, 165, 233, 0.18), transparent 34%),
+    radial-gradient(circle at 86% 8%, rgba(139, 92, 246, 0.16), transparent 30%),
+    radial-gradient(circle at 82% 78%, rgba(34, 197, 94, 0.12), transparent 34%),
+    linear-gradient(135deg, #F0F9FF 0%, #EEF2FF 48%, #F8FAFC 100%);
   position: relative;
   overflow-x: hidden;
 }
@@ -198,34 +192,34 @@ textarea {
 .mesh-sphere {
   position: absolute;
   border-radius: 999px;
-  filter: blur(110px);
-  opacity: 0.34;
+  filter: blur(92px);
+  opacity: 0.58;
   animation: float 22s infinite ease-in-out;
 }
 
 .sphere-1 {
-  top: -18%;
-  left: -14%;
-  width: min(520px, 50vw);
-  height: min(520px, 50vw);
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.42), rgba(99, 102, 241, 0.24));
+  top: -16%;
+  left: -12%;
+  width: min(560px, 52vw);
+  height: min(560px, 52vw);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.82), rgba(99, 102, 241, 0.6));
 }
 
 .sphere-2 {
-  right: -16%;
-  top: 24%;
-  width: min(560px, 54vw);
-  height: min(560px, 54vw);
-  background: linear-gradient(135deg, rgba(45, 212, 191, 0.26), rgba(14, 165, 233, 0.24));
+  right: -14%;
+  top: 20%;
+  width: min(620px, 58vw);
+  height: min(620px, 58vw);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.56), rgba(14, 165, 233, 0.52));
   animation-delay: -7s;
 }
 
 .sphere-3 {
-  left: 40%;
-  bottom: -24%;
-  width: min(480px, 48vw);
-  height: min(480px, 48vw);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(14, 165, 233, 0.12));
+  left: 38%;
+  bottom: -22%;
+  width: min(520px, 50vw);
+  height: min(520px, 50vw);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.42), rgba(236, 72, 153, 0.34));
   animation-delay: -13s;
 }
 
@@ -233,10 +227,10 @@ textarea {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(3, 105, 161, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(3, 105, 161, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(3, 105, 161, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(3, 105, 161, 0.055) 1px, transparent 1px);
   background-size: 46px 46px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.56), transparent 76%);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), transparent 76%);
 }
 
 @keyframes float {
@@ -286,11 +280,11 @@ textarea {
   flex-shrink: 0;
 }
 
-.brand-icon {
+.brand-logo {
   width: 2.45rem;
   height: 2.45rem;
   display: block;
-  filter: drop-shadow(0 10px 18px rgba(3, 105, 161, 0.24)); 
+  filter: drop-shadow(0 10px 18px rgba(3, 105, 161, 0.24));
 }
 
 .brand-text {
@@ -635,7 +629,7 @@ label {
     flex-wrap: wrap;
   }
 
-  .brand-icon {
+  .brand-logo {
     width: 2.2rem;
     height: 2.2rem;
   }
