@@ -2,7 +2,8 @@ import argparse
 import os
 import pandas as pd
 import torch
-from sentence_transformers import SentenceTransformer, SentenceTransformerTrainingArguments, SentenceTransformerTrainer, losses
+import matplotlib.pyplot as plt
+from sentence_transformers import SentenceTransformer, SentenceTransformerTrainingArguments, SentenceTransformerTrainer, losses, evaluation
 from datasets import Dataset
 from transformers import EarlyStoppingCallback
 from sklearn.model_selection import train_test_split
@@ -68,6 +69,15 @@ def main():
         lr_scheduler_type="cosine"
     )
     
+    # Set up evaluator
+    print("Setting up evaluation metrics...")
+    evaluator = evaluation.TripletEvaluator(
+        anchors=df_eval["anchor"].tolist(),
+        positives=df_eval["positive"].tolist(),
+        negatives=df_eval["negative"].tolist(),
+        name="triplet"
+    )
+    
     train_loss = losses.MultipleNegativesRankingLoss(model)
     
     current_batch_size = args.batch_size
@@ -87,6 +97,7 @@ def main():
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             loss=train_loss,
+            evaluator=evaluator,
             callbacks=[EarlyStoppingCallback(early_stopping_patience=2)]
         )
         
@@ -107,6 +118,65 @@ def main():
     
     print(f"Saving fine-tuned model to: {args.output_path}")
     model.save_pretrained(args.output_path)
+    
+    print("Plotting training history...")
+    try:
+        epochs_train = []
+        loss_train = []
+        epochs_eval = []
+        loss_eval = []
+        epochs_acc = []
+        acc_cosine = []
+
+        for entry in trainer.state.log_history:
+            epoch = entry.get("epoch")
+            if "loss" in entry:
+                epochs_train.append(epoch)
+                loss_train.append(entry.get("loss"))
+            if "eval_loss" in entry:
+                epochs_eval.append(epoch)
+                loss_eval.append(entry.get("eval_loss"))
+            for k, v in entry.items():
+                if "accuracy_cosine" in k:
+                    epochs_acc.append(epoch)
+                    acc_cosine.append(v)
+                    break
+
+        plt.figure(figsize=(12, 5))
+
+        # Plot Loss
+        plt.subplot(1, 2, 1)
+        if loss_train:
+            plt.plot(epochs_train, loss_train, label="Train Loss", marker="o")
+        if loss_eval:
+            plt.plot(epochs_eval, loss_eval, label="Eval Loss", marker="s")
+        plt.title("Training and Evaluation Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.grid(True)
+
+        # Plot Accuracy
+        plt.subplot(1, 2, 2)
+        if acc_cosine:
+            plt.plot(epochs_acc, acc_cosine, label="Accuracy (Cosine)", marker="^", color="green")
+            plt.title("Evaluation Triplet Accuracy")
+            plt.xlabel("Epoch")
+            plt.ylabel("Accuracy")
+            plt.legend()
+            plt.grid(True)
+        else:
+            plt.text(0.5, 0.5, "Accuracy metric not available", 
+                     horizontalalignment="center", verticalalignment="center")
+            plt.title("Evaluation Triplet Accuracy (No Data)")
+
+        plot_file = os.path.join(args.output_path, "training_metrics.png")
+        plt.tight_layout()
+        plt.savefig(plot_file)
+        print(f"Saved training plot to: {plot_file}")
+    except Exception as e:
+        print(f"WARNING: Failed to generate plots: {e}")
+
     print("Bi-Encoder training complete!")
 
 if __name__ == "__main__":
