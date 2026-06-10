@@ -2,8 +2,8 @@
 *.md
 !README.md
 !FINETUNING_GUIDE.md
-!ISSUE.md
-!BUG.md
+# !ISSUE.md
+# !BUG.md
 !FLOW.md
 !AGENT.md
 **/__pycache__/
