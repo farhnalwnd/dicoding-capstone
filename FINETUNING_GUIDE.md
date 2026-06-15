@@ -40,18 +40,14 @@ caps-final/
 ├── data/
 │   └── training/
 │       ├── bi_encoder_train.csv      # Data training (Triplet)
-│       ├── bi_encoder_eval.csv       # Data evaluasi (Triplet)
-│       ├── cross_encoder_train.csv   # Data training (Pairs)
-│       └── cross_encoder_eval.csv    # Data evaluasi (Pairs)
+│       └── bi_encoder_eval.csv       # Data evaluasi (Triplet)
 ├── training/
 │   ├── scripts/
-│   │   ├── train_bi_encoder.py       # Script train Bi-Encoder
-│   │   └── train_cross_encoder.py    # Script train Cross-Encoder
+│   │   └── train_bi_encoder.py       # Script train Bi-Encoder
 │   └── notebooks/
 │       └── finetuning-model.ipynb    # Jupyter orchestrator
 └── models/
-    ├── bi-encoder-cv-matcher/        # Output model Bi-Encoder
-    └── cross-encoder-cv-matcher/     # Output model Cross-Encoder
+    └── bi-encoder-cv-matcher/        # Output model Bi-Encoder
 ```
 
 ---
@@ -74,22 +70,6 @@ Menggunakan format **Triplet (Anchor, Positive, Negative)** untuk melatih model 
   anchor,positive,negative
   "Backend Engineer Python & FastAPI","Pengalaman 3 tahun REST API dengan FastAPI","UI/UX Designer mahir Figma"
   "Docker expert required","Menggunakan Docker selama 4 tahun","Keahlian Adobe Photoshop"
-  ```
-
-### 2. Cross-Encoder Dataset (`cross_encoder_train.csv`, `cross_encoder_eval.csv`)
-Menggunakan format **Pairs** dengan label biner untuk melatih re-ranking kandidat secara mendetail.
-
-* **Header**: `cv_text,jd_text,label`
-* **Format**:
-  * `cv_text`: Teks CV
-  * `jd_text`: Teks Lowongan Kerja
-  * `label`: `1.0` (Cocok/Match) atau `0.0` (Tidak Cocok/No Match)
-
-* **Contoh Isi CSV**:
-  ```csv
-  cv_text,jd_text,label
-  "Pengalaman 3 tahun Python Django","Backend Engineer Python & Django required",1.0
-  "UI/UX Designer mahir Figma","Backend Engineer Python required",0.0
   ```
 
 ---
@@ -173,39 +153,6 @@ def train_bi_encoder(train_csv, eval_csv, output_path, epochs=5, batch_size=16):
 
 ---
 
-## Strategi 3: Cross-Encoder (Re-Ranking)
-
-Memproses CV dan JD bersama-sama dalam satu forward pass. Sangat akurat untuk memfilter top-N hasil pencarian awal dari Bi-Encoder.
-
-### Script Training (`training/scripts/train_cross_encoder.py`)
-```python
-import pandas as pd
-from sentence_transformers import CrossEncoder, InputExample
-from torch.utils.data import DataLoader
-
-def train_cross_encoder(train_csv, output_path, epochs=3, batch_size=16):
-    model = CrossEncoder('paraphrase-multilingual-MiniLM-L12-v2', num_labels=1, max_length=512)
-    
-    # Load custom CSV
-    df_train = pd.read_csv(train_csv)
-    train_examples = [
-        InputExample(texts=[row['cv_text'], row['jd_text']], label=float(row['label']))
-        for _, row in df_train.iterrows()
-    ]
-    
-    train_loader = DataLoader(train_examples, shuffle=True, batch_size=batch_size)
-    
-    model.fit(
-        train_objectives=[(train_loader, None)],
-        epochs=epochs,
-        warmup_steps=100,
-        output_path=output_path
-    )
-    print(f"Cross-Encoder Model saved to {output_path}")
-```
-
----
-
 ## Strategi 4: Custom Classification Layer (Hybrid)
 
 Menggabungkan embedding static $[u, v, |u - v|]$ ke Dense Network PyTorch/TensorFlow untuk scoring kustom 0-1.
@@ -224,7 +171,6 @@ Latihan domain-specific menggunakan corpus teks mentah (tanpa label) untuk melat
 |---|---|---|---|---|
 | **Dynamic Skills** | JSON manual | Medium | Model Default | Deteksi skill per departemen |
 | **Bi-Encoder** | Triplet CSV | Tinggi | `models/bi-encoder-cv-matcher` | Semantic search, similarity scoring, filtering |
-| **Cross-Encoder [REMOVED/HISTORICAL]** | Pairs CSV | Sangat Tinggi | `models/cross-encoder-cv-matcher` | (Historical) Re-ranking akhir jika Cross-Encoder diaktifkan kembali |
 
 ---
 
@@ -235,20 +181,19 @@ Ikuti langkah-langkah di bawah untuk mengeksekusi proses fine-tuning pada perang
 ### Langkah 1: Generate Dataset Sintetis
 Jalankan script generator untuk membuat dataset training (bilingual, 11 domain) secara otomatis:
 ```bash
-python training/scripts/generate_dataset.py --num_triplets 2000 --num_pairs 2000
+python training/scripts/generate_dataset.py --num_triplets 2000
 ```
 Dataset akan disimpan di:
 - `data/training/bi_encoder_train.csv`
-- `data/training/cross_encoder_train.csv`
 
-*(Opsional: Jika memiliki data real, timpa kedua file CSV di atas dengan format kolom yang sama).*
+*(Opsional: Jika memiliki data real, timpa file CSV di atas dengan format kolom yang sama).*
 
 ### Langkah 2: Jalankan Fine-Tuning
 Anda dapat memilih salah satu cara di bawah:
 
 #### Opsi A: Menggunakan Jupyter Notebook (Direkomendasikan untuk monitoring/visual)
 1. Buka file `training/notebooks/finetuning-model.ipynb` menggunakan Jupyter Lab / VS Code.
-2. Jalankan sel secara bertahap mulai dari **Phase 1** (verifikasi dataset) hingga **Phase 4** (verifikasi output model).
+2. Jalankan sel secara bertahap mulai dari **Phase 1** (verifikasi dataset) hingga **Phase 3** (verifikasi output model).
 
 #### Opsi B: Menjalankan Script Python Secara Langsung via Terminal
 Jika ingin proses training berjalan di background tanpa membuka Jupyter:

@@ -477,7 +477,7 @@ textarea {
 .view-container {
   margin: 0 auto;
   padding: 2.8rem;
-  max-width: 980px;
+  max-width: 1200px;
 }
 
 h1,

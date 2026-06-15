@@ -6,6 +6,10 @@ from sklearn.cluster import KMeans
 from typing import List, Dict, Any, Tuple
 import numpy as np
 
+from app.services.explainability import (
+    build_match_explanation
+)
+
 MODEL_MAIN = os.getenv("MODEL_MAIN", "paraphrase-multilingual-MiniLM-L12-v2")
 MODEL_BI_ENCODER = os.getenv("MODEL_BI_ENCODER")
 
@@ -29,6 +33,34 @@ def get_similarity_score(text1: str, text2: str) -> float:
     emb2 = model.encode(text2, convert_to_tensor=True)
     similarity = util.cos_sim(emb1, emb2).item()
     return round(max(0.0, min(1.0, similarity)) * 100, 2)
+    
+def analyze_cv_jd(
+    cv_text: str,
+    jd_text: str,
+    domain: str
+):
+    """
+    Complete explainable CV-JD analysis
+    """
+
+    similarity_score = get_similarity_score(
+        cv_text,
+        jd_text
+    )
+
+    matched_skills, missing_skills = (
+        match_cv_jd_hybrid(
+            cv_text=cv_text,
+            jd_text=jd_text,
+            domain=domain
+        )
+    )
+
+    return build_match_explanation(
+        similarity_score=similarity_score,
+        matched_skills=matched_skills,
+        missing_skills=missing_skills
+    )
 
 def extract_phrases(text: str) -> List[str]:
     from app.services.parser import STOPWORDS
@@ -38,7 +70,7 @@ def extract_phrases(text: str) -> List[str]:
     valid_phrases = []
     
     # Stopwords tambahan lokal khusus untuk pemecahan frasa di tengah
-    split_conjunctions = {"and", "or", "dan", "atau", "with", "using", "menggunakan", "dengan", "for", "untuk", "in", "di", "on", "pada", "from", "dari", "to", "ke", "by", "as"}
+    split_conjunctions = {"and", "or", "dan", "atau", "with", "using", "menggunakan", "dengan", "for", "untuk", "in", "di", "on", "pada", "from", "dari", "to", "ke", "by", "as", "including", "termasuk", "such as", "seperti", "maupun", "ataupun", "vs", "versus"}
     
     for p in phrases:
         p = p.strip()
@@ -50,7 +82,7 @@ def extract_phrases(text: str) -> List[str]:
         p_lower = p.lower()
         if any(f" {w} " in f" {p_lower} " for w in split_conjunctions):
             # Lakukan pemecahan
-            parts = re.split(r'\b(?:and|or|dan|atau|with|using|menggunakan|dengan|for|untuk|in|di|on|pada|from|dari|to|ke|by|as)\b', p, flags=re.IGNORECASE)
+            parts = re.split(r'\b(?:and|or|dan|atau|with|using|menggunakan|dengan|for|untuk|in|di|on|pada|from|dari|to|ke|by|as|including|termasuk|such as|seperti|maupun|ataupun|vs|versus)\b', p, flags=re.IGNORECASE)
             for part in parts:
                 part = part.strip()
                 if part:

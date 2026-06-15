@@ -35,7 +35,7 @@
     </button>
     
     <div v-if="detailedResult" class="results detailed-results">
-      <div class="score-card">
+      <div class="score-card" :class="getScoreClass(detailedResult.similarity_score)">
         <h3>Match Score</h3>
         <div class="score-value">{{ detailedResult.similarity_score }}%</div>
       </div>
@@ -73,6 +73,12 @@ const loading = ref(false)
 const detailedResult = ref(null)
 
 const handleFileSelect = (e) => { selectedFile.value = e.target.files[0] }
+
+const getScoreClass = (score) => {
+  if (score < 30) return 'score-danger'
+  if (score < 50) return 'score-warning'
+  return 'score-success'
+}
 
 const matchDetailed = async () => {
   if (!selectedFile.value || !jobDescription.value) {
@@ -143,5 +149,83 @@ const matchDetailed = async () => {
 .empty-state {
   color: #999;
   font-style: italic;
+}
+
+.score-card {
+  max-width: 220px;
+  margin: 0 auto 2rem;
+  padding: 1.2rem;
+  text-align: center;
+  border-radius: 20px;
+  box-shadow: var(--shadow-strong);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.score-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
+}
+
+.score-card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.score-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.score-danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+  border: 2px solid var(--danger);
+}
+
+.score-danger h3 {
+  color: #DC2626;
+}
+
+.score-danger .score-value {
+  background: linear-gradient(135deg, #DC2626, #EF4444);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.score-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 179, 8, 0.1) 100%);
+  border: 2px solid var(--warning);
+}
+
+.score-warning h3 {
+  color: #D97706;
+}
+
+.score-warning .score-value {
+  background: linear-gradient(135deg, #D97706, #F59E0B);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.score-success {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.1) 100%);
+  border: 2px solid var(--success);
+}
+
+.score-success h3 {
+  color: #16A34A;
+}
+
+.score-success .score-value {
+  background: linear-gradient(135deg, #16A34A, #22C55E);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 </style>

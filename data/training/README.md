@@ -8,8 +8,6 @@ Folder ini berisi dataset training untuk fine-tuning model Bi-Encoder dan Cross-
 data/training/
 ├── bi_encoder_train.csv      # Data training Bi-Encoder (Triplet)
 ├── bi_encoder_eval.csv       # Data evaluasi Bi-Encoder (Triplet)
-├── cross_encoder_train.csv   # Data training Cross-Encoder (Pairs)
-├── cross_encoder_eval.csv    # Data evaluasi Cross-Encoder (Pairs)
 └── README.md                 # File ini
 ```
 
@@ -42,39 +40,11 @@ anchor,positive,negative
 - 200-500 baris untuk evaluasi
 - Variasi domain (IT, HR, Finance, dll)
 
-### 2. Cross-Encoder Dataset (Pairs)
-
-Format: **Labeled Pairs**
-
-**Header CSV:**
-```csv
-cv_text,jd_text,label
-```
-
-**Kolom:**
-- `cv_text`: Teks CV atau bagian CV
-- `jd_text`: Teks job description
-- `label`: `1.0` (Match/Cocok) atau `0.0` (No Match/Tidak Cocok)
-
-**Contoh:**
-```csv
-cv_text,jd_text,label
-"Pengalaman 3 tahun Python Django","Backend Engineer Python & Django required",1.0
-"UI/UX Designer mahir Figma","Backend Engineer Python required",0.0
-"Menggunakan Docker 4 tahun","DevOps Engineer with Docker experience",1.0
-```
-
-**Rekomendasi:**
-- Minimal 2000 baris untuk training
-- 400-800 baris untuk evaluasi
-- Balance antara label 1.0 dan 0.0 (sekitar 50-70% label 1.0)
-
 ## Cara Menggunakan
 
 1. **Siapkan dataset Anda** dalam format CSV di folder ini
 2. **Jalankan notebook** `finetuning-model.ipynb` di root project
-3. **Pilih phase training** yang diinginkan (Bi-Encoder atau Cross-Encoder)
-4. **Model output** akan tersimpan di `models/`
+3. **Model output** akan tersimpan di `models/`
 
 ## Catatan Penting
 

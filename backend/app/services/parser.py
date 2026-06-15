@@ -28,7 +28,7 @@ STOPWORDS = {
     "results-oriented", "proven", "track", "record", "excellent", "strong",
     "good", "success", "successful", "highly", "hardworking", "talented",
     "mencari", "termotivasi", "dinamis", "berorientasi", "hasil", "terbukti",
-    "baik", "sukses", "sangat", "berbakat", "kompeten", "professional",
+    "baik", "sukses", "sangat", "berbakat", "kompeten", "professional", "responsible"
 
     # --- 5. SATUAN WAKTU & INFORMASI UMUM (Sering muncul di riwayat kerja) ---
     "years", "months", "year", "month",

@@ -9,17 +9,10 @@ if "MODEL_BI_ENCODER" not in os.environ or not os.environ["MODEL_BI_ENCODER"]:
     workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     os.environ["MODEL_BI_ENCODER"] = os.path.join(workspace_root, "models", "bi-encoder-cv-matcher")
 
-if "MODEL_CROSS_ENCODER" not in os.environ or not os.environ["MODEL_CROSS_ENCODER"]:
-    workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    os.environ["MODEL_CROSS_ENCODER"] = os.path.join(workspace_root, "models", "cross-encoder-cv-matcher")
-
 print(f"MODEL_BI_ENCODER path: {os.environ.get('MODEL_BI_ENCODER')}")
-print(f"MODEL_CROSS_ENCODER path: {os.environ.get('MODEL_CROSS_ENCODER')}")
 
 print("Initializing NLP models...")
-from app.services.nlp import get_similarity_score, match_cv_jd_hybrid, cross_encoder
-
-print(f"Cross-Encoder loaded successfully? {cross_encoder is not None}")
+from app.services.nlp import get_similarity_score, match_cv_jd_hybrid
 
 # Sample test inputs
 cv_text = "I am a backend developer. Experieced in Python development, Docker, and PostgreSQL database. Also familiar with Vue."
@@ -27,28 +20,18 @@ jd_text = "Looking for a Python Developer. Requirements: Python, PostgreSQL, and
 domain = "it"
 
 print("\n--- Running Similarity Score Test (MATCHING CASE) ---")
-# 1. Cross-Encoder Score
-score_ce = get_similarity_score(cv_text, jd_text)
-# Let's print raw prediction
-raw_ce = cross_encoder.predict([[cv_text, jd_text]])
-# 2. Bi-Encoder Score (bypass cross_encoder to test bi_encoder)
+# Bi-Encoder Score
 from sentence_transformers import util
 from app.services.nlp import model
 emb_cv = model.encode(cv_text, convert_to_tensor=True)
 emb_jd = model.encode(jd_text, convert_to_tensor=True)
 score_be = round(max(0.0, min(1.0, util.cos_sim(emb_cv, emb_jd).item())) * 100, 2)
-print(f"Calculated Match Score (Cross-Encoder): {score_ce}%")
-print(f"Raw Cross-Encoder prediction: {raw_ce}")
 print(f"Calculated Match Score (Bi-Encoder): {score_be}%")
 
 cv_non_matching = "I am a creative graphic designer and artist. Experienced in Photoshop, Illustrator, Figma, and painting. I design flyers and posters."
 print("\n--- Running Similarity Score Test (NON-MATCHING CASE) ---")
-score_non_ce = get_similarity_score(cv_non_matching, jd_text)
-raw_non_ce = cross_encoder.predict([[cv_non_matching, jd_text]])
 emb_cv_non = model.encode(cv_non_matching, convert_to_tensor=True)
 score_non_be = round(max(0.0, min(1.0, util.cos_sim(emb_cv_non, emb_jd).item())) * 100, 2)
-print(f"Calculated Match Score (Non-matching Cross-Encoder): {score_non_ce}%")
-print(f"Raw Non-matching Cross-Encoder prediction: {raw_non_ce}")
 print(f"Calculated Match Score (Non-matching Bi-Encoder): {score_non_be}%")
 
 print("\n--- Running Hybrid Skills Matching Test (IT Domain) ---")

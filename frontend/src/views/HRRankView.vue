@@ -48,9 +48,9 @@
             <tr>
               <th>Rank</th>
               <th>Candidate Name</th>
-              <th>Match Score</th>
               <th>Semantic</th>
               <th>Domain Skills</th>
+              <th>Final Score</th>
             </tr>
           </thead>
           <tbody>
@@ -62,18 +62,18 @@
                 <div>{{ r.name }}</div>
                 <small v-if="r.filename" class="filename-text">{{ r.filename }}</small>
               </td>
+              <td class="metric-col">{{ r.semantic_score ?? '-' }}%</td>
+              <td class="metric-col">
+                <span>{{ r.domain_skill_score ?? '-' }}%</span>
+                <small v-if="r.matched_skills_count !== undefined" class="skill-count-text">
+                  {{ r.matched_skills_count }} match / {{ r.missing_skills_count }} miss
+                </small>
+              </td>
               <td class="score-col">
                 <div class="score-bar-container">
                   <div class="score-bar" :class="getScoreClass(r.score)" :style="{ width: r.score + '%' }"></div>
                   <span class="score-text" :class="getScoreClass(r.score)">{{ r.score }}%</span>
                 </div>
-              </td>
-              <td class="metric-col">{{ r.semantic_score ?? '-' }}%</td>
-              <td class="metric-col">
-                <span>{{ r.domain_skill_score ?? '-' }}%</span>
-                <small v-if="r.matched_skills_count !== undefined" class="skill-count-text">
-                  {{ r.matched_skills_count }} matched / {{ r.missing_skills_count }} missing
-                </small>
               </td>
             </tr>
           </tbody>
@@ -127,8 +127,8 @@ const removeFile = (index) => {
 }
 
 const getScoreClass = (score) => {
-  if (score >= 80) return 'score-high'
-  if (score >= 40) return 'score-medium'
+  if (score >= 55) return 'score-high'
+  if (score >= 30) return 'score-medium'
   return 'score-low'
 }
 
@@ -367,7 +367,7 @@ const rankCVs = async () => {
   display: block;
   margin-top: 0.25rem;
   color: #64748B;
-  font-size: 0.8rem;
+  font-size: 0.6rem;
   font-weight: 500;
 }
 

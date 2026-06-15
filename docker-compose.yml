@@ -8,6 +8,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db
+      - mongo_config:/data/configdb
 
   mongo-express:
     image: mongo-express
@@ -46,15 +47,54 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT}:5173"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - caps_fe_data:/app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
     depends_on:
       - backend
 
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+
+    ports:
+      - "3050:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+    depends_on:
+      - prometheus
+  
 volumes:
   mongo_data:
+    driver: local
+
+  caps_fe_data:
+    driver: local
+
+  mongo_config:
+    driver: local
+
   hf_cache:
+    driver: local
+
+  grafana_data:
+    driver: local

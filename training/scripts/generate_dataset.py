@@ -131,61 +131,8 @@ class SyntheticDataGenerator:
             
         return pd.DataFrame(data)
     
-    def generate_pair_data(self, num_examples=2000):
-        """Generate labeled pair data (cv_text, jd_text, label) for Cross-Encoder with semantic 4-tier labels"""
-        data = []
-        domains = list(self.domains_config.keys())
-        
-        positive_templates = self.templates.get("positive_templates", {})
-        anchor_templates = self.templates.get("anchor_templates", {})
-        negative_templates = self.templates.get("negative_templates", {})
-        
-        for _ in range(num_examples):
-            domain = random.choice(domains)
-            
-            positive_tmpls = positive_templates.get(domain, positive_templates.get("general", []))
-            anchor_tmpls = anchor_templates.get(domain, anchor_templates.get("general", []))
-            negative_tmpls = negative_templates.get(domain, negative_templates.get("general", []))
-            
-            if not positive_tmpls or not anchor_tmpls:
-                continue
-            
-            # 30% strong match, 25% good match, 25% partial match, 20% no match
-            rand = random.random()
-            
-            if rand < 0.30:
-                # Strong match: same domain CV-JD with same skill keywords
-                cv = self._fill_template(random.choice(positive_tmpls), domain, is_positive=True)
-                jd = self._fill_template(random.choice(anchor_tmpls), domain)
-                label = random.uniform(0.88, 1.0)
-            elif rand < 0.55:
-                # Good match: same domain CV-JD but different skill variations
-                cv = self._fill_template(random.choice(positive_tmpls), domain, is_positive=True)
-                jd = self._fill_template(random.choice(anchor_tmpls), domain)
-                label = random.uniform(0.60, 0.80)
-            elif rand < 0.80:
-                # Partial match: CV from negative template (wrong context), JD from correct domain
-                cv = self._fill_template(random.choice(negative_tmpls), domain, is_positive=False)
-                jd = self._fill_template(random.choice(anchor_tmpls), domain)
-                label = random.uniform(0.25, 0.50)
-            else:
-                # No match: completely different domains
-                cv = self._fill_template(random.choice(positive_tmpls), domain, is_positive=True)
-                neg_domain = random.choice([d for d in domains if d != domain])
-                neg_anchor_tmpls = anchor_templates.get(neg_domain, anchor_templates.get("general", []))
-                jd = self._fill_template(random.choice(neg_anchor_tmpls), neg_domain)
-                label = random.uniform(0.0, 0.20)
-                
-            data.append({
-                "cv_text": cv,
-                "jd_text": jd,
-                "label": label
-            })
-            
-        return pd.DataFrame(data)
-    
-    def save_dataset(self, output_dir, num_triplets=2000, num_pairs=2000):
-        """Generate and save both datasets to CSV files"""
+    def save_dataset(self, output_dir, num_triplets=2000):
+        """Generate and save the triplet dataset to CSV file"""
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
@@ -193,19 +140,14 @@ class SyntheticDataGenerator:
         df_triplet.to_csv(output_path / "bi_encoder_train.csv", index=False)
         print(f"Generated and saved Bi-Encoder triplet dataset to: {output_path / 'bi_encoder_train.csv'}")
         
-        df_pair = self.generate_pair_data(num_pairs)
-        df_pair.to_csv(output_path / "cross_encoder_train.csv", index=False)
-        print(f"Generated and saved Cross-Encoder pair dataset to: {output_path / 'cross_encoder_train.csv'}")
-        
-        return df_triplet, df_pair
+        return df_triplet
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate synthetic data for Bi-Encoder and Cross-Encoder training.")
+    parser = argparse.ArgumentParser(description="Generate synthetic data for Bi-Encoder training.")
     parser.add_argument("--skills_dir", type=str, default="backend/app/core/skills", help="Path to skills configs.")
     parser.add_argument("--templates_dir", type=str, default="training/templates", help="Path to templates JSON.")
     parser.add_argument("--output_dir", type=str, default="data/training", help="Output directory for generated datasets.")
     parser.add_argument("--num_triplets", type=int, default=2000, help="Number of triplet examples.")
-    parser.add_argument("--num_pairs", type=int, default=2000, help="Number of pair examples.")
     
     args = parser.parse_args()
     
@@ -216,8 +158,7 @@ def main():
     
     generator.save_dataset(
         output_dir=args.output_dir,
-        num_triplets=args.num_triplets,
-        num_pairs=args.num_pairs
+        num_triplets=args.num_triplets
     )
 
 if __name__ == "__main__":
