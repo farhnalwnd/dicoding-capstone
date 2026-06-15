@@ -54,9 +54,11 @@ graph TD
 ### 👥 Recruiter / HR Module
 
 *   **Candidate Ranking**: 
-    Upload a folder of CV PDFs and rank them against a target job description. The final score is computed as:
+    Upload a folder of CV PDFs and rank them against a target job description. The final score is computed using a **3-component smart scoring formula** that rewards domain alignment:
     
-    $$\text{Final Score} = (85\% \times \text{Semantic Similarity}) + (15\% \times \text{Skill Coverage})$$
+    $$\text{Final Score} = (70\% \times \text{Semantic}) + (10\% \times \text{Coverage}_{\text{adj}}) + (20\% \times \text{Domain Relevance})$$
+
+    > **Domain Alignment Rule**: IT CV + IT JD → highest score. IT CV + Finance JD → lower score (0% domain relevance bonus).
 
 *   **Candidate Clustering**: 
     Perform K-Means clustering on candidate CV embeddings to group similar talents together dynamically (e.g., separating backend, frontend, and QA candidates).
@@ -74,6 +76,50 @@ graph TD
       ]
     }
     ```
+
+---
+
+## 🎯 Smart Scoring Engine
+
+All match scores across **CV-JD Analysis**, **HR Ranking**, and **Bulk Candidate Screening** use a unified 3-component formula to ensure domain-appropriate scoring:
+
+```
+Final Score = (Semantic × 70%) + (Coverage_adjusted × 10%) + (Domain Relevance × 20%)
+```
+
+### Components
+
+| Component | Weight | Description |
+| :--- | :---: | :--- |
+| **Semantic Similarity** | 70% | Bi-Encoder cosine similarity between full CV text and JD text |
+| **Skill Coverage (adjusted)** | 10% | % of JD-required skills found in CV, penalized by JD skill depth |
+| **Domain Relevance** | 20% | % of the selected domain's skill list that appears in the CV |
+
+### Skill Reliability Penalty
+
+JDs that contain very few skills (e.g., a Finance JD with only 2 skills) receive a reliability penalty on the coverage component:
+
+```python
+MIN_RELIABLE_SKILLS = 8
+skill_reliability = min(1.0, total_jd_skills / 8)
+coverage_adjusted = coverage_ratio × skill_reliability
+```
+
+**Example:**
+- Finance JD has 2 skills → `reliability = 0.25` → coverage bonus is reduced by 75%
+- IT JD has 16 skills → `reliability = 1.0` → full coverage weight applies
+
+### Domain Relevance Scoring
+
+Domain relevance measures how many of the **selected domain's master skill list** appear in the CV, regardless of what the JD requires:
+
+```python
+# Count how many IT domain skills appear in the CV
+cv_domain_hits = sum(1 for skill in domain_skills if skill in cv_text)
+domain_relevance = (cv_domain_hits / total_domain_skills) × 100
+```
+
+**Result:** An IT CV submitted against an IT JD will always score higher than the same CV submitted against an HR or Finance JD.
 
 ---
 
@@ -185,7 +231,9 @@ Implemented using GitHub Actions (`.github/workflows/backend.yml`), triggers aut
 │   │   │       └── general.json
 │   │   ├── services/
 │   │   │   ├── linkedin_scraper.py# BeautifulSoup job scraper
-│   │   │   ├── nlp.py             # NLP match, search, clustering logic
+│   │   │   ├── nlp.py             # NLP match, search, clustering + domain relevance
+│   │   │   ├── explainability.py  # Smart scoring formula (3-component hybrid)
+│   │   │   ├── progress.py        # SSE job progress tracker
 │   │   │   └── parser.py          # PDF/DOCX parsing & cleaning logic
 │   │   └── main.py                # FastAPI app entrypoint
 │   ├── requirements.txt
@@ -193,7 +241,9 @@ Implemented using GitHub Actions (`.github/workflows/backend.yml`), triggers aut
 ├── frontend/
 │   ├── src/
 │   │   ├── components/            # Reusable UI components
-│   │   ├── views/                 # View pages (Analyze, Cluster, Scrape, etc.)
+│   │   │   ├── ErrorState.vue     # Reusable error display component (4 types)
+│   │   │   └── FloatingErrorBanner.vue # Non-intrusive toast-style error banner
+│   │   ├── views/                 # View pages (Analyze, Cluster, Scrape, Rank, etc.)
 │   │   ├── router/                # Vue Router configuration
 │   │   ├── App.vue                # Root App component
 │   │   └── main.js                # App entrypoint
@@ -396,13 +446,16 @@ Once deployed, the following services are available:
 ## 🔗 Available API Endpoints
 
 ### 🔍 Job Seeker Endpoints
+*   `POST /api/match-detailed`: Semantic CV ↔ JD matching with full explainability (3-component smart scoring).
+*   `POST /api/jobs/start`: SSE-based background CV-JD analysis with real-time progress tracking.
 *   `POST /api/scrape-recommend`: Scrapes jobs from LinkedIn and triggers immediate recommendation.
-*   `POST /api/match-detailed`: Semantic CV ↔ JD matching with full explainability.
 *   `POST /api/jobs/semantic-search`: Semantic vector search against MongoDB job collection.
 
 ### 👥 Recruiter / HR Endpoints
-*   `POST /api/hr/rank`: Compares and ranks multiple CVs against a job description.
-*   `POST /api/hr/cluster`: Groups multiple CVs into distinct talent categories.
+*   `POST /api/hr/rank`: Bulk CV ranking against a JD — uses same 3-component smart scoring as CV-JD Analysis.
+*   `POST /api/hr/rank/start`: SSE-based background HR ranking with real-time progress.
+*   `POST /api/hr/cluster`: Groups multiple CVs into distinct talent categories via K-Means.
+*   `POST /api/hr/cluster/start`: SSE-based background clustering.
 
 ### 💾 Database Utilities
 *   `GET /api/jobs`: Fetches all jobs stored in the database.

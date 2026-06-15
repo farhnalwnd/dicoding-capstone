@@ -1,7 +1,8 @@
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks
 from typing import List, Tuple
 from app.services.parser import extract_text, extract_candidate_name, clean_text
-from app.services.nlp import cluster_documents, get_similarity_score, match_cv_jd_hybrid, extract_phrases, get_skill_embeddings_for_skills, model
+from app.services.nlp import cluster_documents, get_similarity_score, match_cv_jd_hybrid, extract_phrases, get_skill_embeddings_for_skills, model, has_skill_exact
+from app.core.domain_loader import load_domain_config
 from app.core.metrics import (
     REQUEST_COUNT,
     REQUEST_LATENCY,
@@ -15,6 +16,58 @@ import time
 import asyncio
 
 router = APIRouter()
+
+
+def compute_candidate_score(
+    semantic_score: float,
+    matched_skills: list,
+    missing_skills: list,
+    cv_text: str,
+    domain: str
+) -> tuple:
+    """
+    Compute final match score using the same formula as build_match_explanation.
+    Formula: 70% Semantic + 10% Coverage (reliability-adjusted) + 20% Domain Relevance
+
+    Rules:
+    - IT CV + IT JD  → highest score (domain relevance bonus)
+    - IT CV + HR JD  → lower score  (0 domain relevance)
+    - HR CV + IT JD  → lower score  (0 domain relevance for IT domain)
+    - JDs with < 8 skills get a reliability penalty on coverage
+    """
+    total_skills = len(matched_skills) + len(missing_skills)
+    coverage_ratio = (
+        (len(matched_skills) / total_skills) * 100
+        if total_skills > 0 else 0.0
+    )
+
+    # Skill reliability penalty: JDs with few skills get less coverage bonus
+    MIN_RELIABLE_SKILLS = 8
+    skill_reliability = min(1.0, total_skills / MIN_RELIABLE_SKILLS)
+    effective_coverage = coverage_ratio * skill_reliability
+
+    # Domain relevance: how many of ALL domain skills appear in the CV
+    config = load_domain_config(domain)
+    all_domain_skills = config.get("skills", [])
+    if all_domain_skills:
+        cv_domain_hits = sum(
+            1 for s in all_domain_skills
+            if has_skill_exact(s, cv_text)
+        )
+        domain_relevance = round(
+            (cv_domain_hits / len(all_domain_skills)) * 100, 2
+        )
+    else:
+        domain_relevance = 0.0
+
+    final_score = round(
+        (semantic_score * 0.70)
+        + (effective_coverage * 0.10)
+        + (domain_relevance * 0.20),
+        2
+    )
+
+    return final_score, round(coverage_ratio, 2), domain_relevance
 
 @router.post("/hr/rank")
 async def rank_candidates(
@@ -70,45 +123,21 @@ async def rank_candidates(
                 )
             )
 
-            total_target_skills = (
-                len(matched_skills)
-                + len(missing_skills)
-            )
-
-            domain_skill_score = (
-                round(
-                    (
-                        len(matched_skills)
-                        / total_target_skills
-                    ) * 100,
-                    2
-                )
-                if total_target_skills > 0
-                else 0.0
-            )
-
-            final_score = round(
-                (
-                    semantic_score * 0.85
-                )
-                +
-                (
-                    domain_skill_score * 0.15
-                ),
-                2
+            final_score, coverage_ratio, domain_relevance = compute_candidate_score(
+                semantic_score=semantic_score,
+                matched_skills=matched_skills,
+                missing_skills=missing_skills,
+                cv_text=cv_text,
+                domain=domain
             )
 
             candidates.append({
                 "name": candidate_name,
                 "score": final_score,
                 "semantic_score": semantic_score,
-                "domain_skill_score": domain_skill_score,
-                "matched_skills_count": len(
-                    matched_skills
-                ),
-                "missing_skills_count": len(
-                    missing_skills
-                ),
+                "domain_skill_score": coverage_ratio,
+                "matched_skills_count": len(matched_skills),
+                "missing_skills_count": len(missing_skills),
                 "matched_skills": matched_skills,
                 "missing_skills": missing_skills,
                 "domain": domain,
@@ -206,16 +235,20 @@ async def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_d
             candidate_name = extract_candidate_name(cv_text, filename)
             semantic_score = get_similarity_score(cv_text, jd_clean)
             matched_skills, missing_skills = match_cv_jd_hybrid(cv_text, jd_clean, domain)
-            
-            total_target_skills = len(matched_skills) + len(missing_skills)
-            domain_skill_score = round((len(matched_skills) / total_target_skills) * 100, 2) if total_target_skills > 0 else 0.0
-            
-            final_score = round((semantic_score * 0.85) + (domain_skill_score * 0.15), 2)
+
+            final_score, coverage_ratio, domain_relevance = compute_candidate_score(
+                semantic_score=semantic_score,
+                matched_skills=matched_skills,
+                missing_skills=missing_skills,
+                cv_text=cv_text,
+                domain=domain
+            )
+
             candidates.append({
                 "name": candidate_name,
                 "score": final_score,
                 "semantic_score": semantic_score,
-                "domain_skill_score": domain_skill_score,
+                "domain_skill_score": coverage_ratio,
                 "matched_skills_count": len(matched_skills),
                 "missing_skills_count": len(missing_skills),
                 "matched_skills": matched_skills,
