@@ -42,6 +42,7 @@ def analyze_cv_jd(
     """
     Complete explainable CV-JD analysis
     """
+    from app.core.domain_loader import load_domain_config
 
     similarity_score = get_similarity_score(
         cv_text,
@@ -56,10 +57,27 @@ def analyze_cv_jd(
         )
     )
 
+    # Domain relevance: how many of ALL domain skills appear in the CV
+    # This rewards CVs that genuinely belong to the same domain as the JD.
+    # An IT CV should score higher against an IT JD than a Finance JD.
+    config = load_domain_config(domain)
+    all_domain_skills = config.get("skills", [])
+    if all_domain_skills:
+        cv_domain_hits = sum(
+            1 for s in all_domain_skills
+            if has_skill_exact(s, cv_text)
+        )
+        domain_relevance = round(
+            (cv_domain_hits / len(all_domain_skills)) * 100, 2
+        )
+    else:
+        domain_relevance = 0.0
+
     return build_match_explanation(
         similarity_score=similarity_score,
         matched_skills=matched_skills,
-        missing_skills=missing_skills
+        missing_skills=missing_skills,
+        domain_relevance=domain_relevance
     )
 
 def extract_phrases(text: str) -> List[str]:

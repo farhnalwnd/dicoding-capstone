@@ -419,6 +419,6 @@ Once deployed, the following services are available:
 - APC193D6Y0002 - Amirullah Hidayat [Aktif]
 - APC306D6Y0321 - Farhan Alwanda [Aktif]
 - APC246D6Y0411 - Yohanes Aditya Krismawan [Aktif]
-- APC596D6Y0230 - Tito Purwana S [Aktif]
+- APC596D6Y0230 - Tito Purwana Sasmita [Aktif]
 
 *   Built with FastAPI, Vue 3, PyTorch, MongoDB, MLflow, Prometheus, and Grafana.

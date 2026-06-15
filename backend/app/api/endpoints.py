@@ -333,10 +333,28 @@ async def run_match_detailed_task(job_id: str, file_bytes: bytes, filename: str,
         await asyncio.sleep(0.3)
         
         progress_manager.update_progress(job_id, 85, "Generating Explainability")
+
+        # Compute domain relevance: how many of ALL domain skills appear in the CV
+        from app.core.domain_loader import load_domain_config
+        from app.services.nlp import has_skill_exact
+        config = load_domain_config(domain)
+        all_domain_skills = config.get("skills", [])
+        if all_domain_skills:
+            cv_domain_hits = sum(
+                1 for s in all_domain_skills
+                if has_skill_exact(s, cv_text)
+            )
+            domain_relevance = round(
+                (cv_domain_hits / len(all_domain_skills)) * 100, 2
+            )
+        else:
+            domain_relevance = 0.0
+
         result = build_match_explanation(
             similarity_score=similarity_score,
             matched_skills=matched_skills,
-            missing_skills=missing_skills
+            missing_skills=missing_skills,
+            domain_relevance=domain_relevance
         )
         await asyncio.sleep(0.3)
         
@@ -347,6 +365,7 @@ async def run_match_detailed_task(job_id: str, file_bytes: bytes, filename: str,
         progress_manager.complete_job(job_id, result)
     except Exception as e:
         progress_manager.fail_job(job_id, f"Failed to analyze: {str(e)}")
+
 
 async def run_semantic_search_task(job_id: str, query_str: str):
     try:

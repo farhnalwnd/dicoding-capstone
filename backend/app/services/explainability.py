@@ -42,7 +42,8 @@ def generate_reasoning(
 def build_match_explanation(
     similarity_score: float,
     matched_skills: List[str],
-    missing_skills: List[str]
+    missing_skills: List[str],
+    domain_relevance: float = 0.0
 ) -> Dict:
 
     total_skills = (
@@ -58,8 +59,27 @@ def build_match_explanation(
             / total_skills
         ) * 100
 
-    # Hybrid match score: 85% Semantic similarity + 15% Skill coverage ratio
-    final_score = (similarity_score * 0.85) + (coverage_ratio * 0.15)
+    # Skill reliability penalty:
+    # JDs with very few skills detected are less reliable signals.
+    # A JD must have at least 8 skills to get full coverage weight.
+    # This aggressively penalizes short/generic JDs (e.g. only 2 skills).
+    MIN_RELIABLE_SKILLS = 8
+    skill_reliability = min(1.0, total_skills / MIN_RELIABLE_SKILLS)
+    effective_coverage = coverage_ratio * skill_reliability
+
+    # Hybrid match score:
+    # 70% Semantic similarity (CV vs JD text)
+    # 10% Skill coverage (reliability-adjusted — penalizes JDs with < 8 skills)
+    # 20% Domain relevance (how many domain skills CV actually contains)
+    #
+    # Domain relevance carries 2x more weight so that:
+    # - An IT CV scores HIGHER against an IT JD than a Finance/HR JD
+    # - JDs with very few skills cannot inflate coverage to beat domain-aligned JDs
+    final_score = (
+        (similarity_score * 0.70)
+        + (effective_coverage * 0.10)
+        + (domain_relevance * 0.20)
+    )
     final_score = round(final_score, 2)
 
     recommendation = get_recommendation_level(
