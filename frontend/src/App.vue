@@ -164,7 +164,7 @@
 
 <script setup>
 import { computed, ref, watch, provide } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from './components/ToastNotification.vue'
 import { authState, isAuthenticated, isHR, isJobSeeker, isAdmin, logout } from './stores/auth'
 
@@ -177,7 +177,8 @@ provide('toast', {
   warning: (msg) => toast.value?.show(msg, { type: 'warning' }),
   info: (msg) => toast.value?.show(msg, { type: 'info' })
 })
-const route = useRoute()
+const route  = useRoute()
+const router = useRouter()
 const isMobileMenuOpen = ref(false)
 const openDropdown = ref(null)
 
@@ -202,6 +203,7 @@ const showNavbar = computed(() => {
 function handleLogout() {
   closeMenus()
   logout()
+  router.push('/login')
 }
 
 function toggleDropdown(name) {

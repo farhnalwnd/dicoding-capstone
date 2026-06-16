@@ -115,11 +115,12 @@ export async function loginWithGoogle(credential) {
 
 export function logout() {
   authState.token = null
-  authState.user = null
+  authState.user  = null
+  authState.error = null
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   setAuthHeader(null)
-  window.location.href = '/login'
+  // Navigation is handled by the caller via vue-router (no full page reload)
 }
 
 export async function fetchCurrentUser() {
