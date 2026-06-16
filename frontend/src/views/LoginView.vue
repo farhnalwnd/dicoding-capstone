@@ -74,6 +74,12 @@ const loading = ref(false)
 const error = ref(null)
 const googleBtn = ref(null)
 
+function getRedirectByRole(role) {
+  if (role === 'admin')     return '/admin'
+  if (role === 'hr')        return '/hr-dashboard'
+  return '/dashboard'
+}
+
 async function handleLogin() {
   if (!email.value || !password.value) return
   loading.value = true
@@ -81,7 +87,7 @@ async function handleLogin() {
   try {
     const user = await login(email.value, password.value)
     toast?.success(`Welcome back, ${user.name}!`)
-    router.push('/dashboard')
+    router.push(getRedirectByRole(user.role))
   } catch (err) {
     error.value = err.message || 'Invalid email or password.'
     toast?.error(error.value)
@@ -96,7 +102,7 @@ async function handleGoogleCallback(response) {
   try {
     const user = await loginWithGoogle(response.credential)
     toast?.success(`Welcome, ${user.name}!`)
-    router.push('/dashboard')
+    router.push(getRedirectByRole(user.role))
   } catch (err) {
     error.value = err.message || 'Google authentication failed.'
     toast?.error(error.value)

@@ -139,22 +139,27 @@ router.beforeEach((to, from, next) => {
   const isAuthenticated = !!authState.token
   const userRole = authState.user?.role
 
-  // If route requires auth
+  // Helper: get default landing page per role
+  function getHomePage(role) {
+    if (role === 'admin') return '/admin'
+    if (role === 'hr')    return '/hr-dashboard'
+    return '/dashboard'
+  }
+
   if (to.meta.requiresAuth) {
     if (!isAuthenticated) {
-      // Not logged in, redirect to login
+      // Not logged in → go to login
       next('/login')
     } else if (to.meta.roles && !to.meta.roles.includes(userRole)) {
-      // Logged in but doesn't have required role, redirect to dashboard
-      next('/dashboard')
+      // Logged in but wrong role → redirect to their own home page
+      next(getHomePage(userRole))
     } else {
-      // Logged in and authorized
       next()
     }
   } else {
-    // Route is public. If logged in and trying to access login/register, redirect to dashboard
+    // Public route: if already logged in and tries /login or /register → redirect home
     if (isAuthenticated && (to.path === '/login' || to.path === '/register')) {
-      next('/dashboard')
+      next(getHomePage(userRole))
     } else {
       next()
     }
