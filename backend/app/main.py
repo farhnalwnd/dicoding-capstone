@@ -1,11 +1,22 @@
 from fastapi import FastAPI
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.endpoints import router as api_router
 from app.api.hr_endpoints import router as hr_router
 from app.api.jobs_endpoints import router as jobs_router
 import os
 
-app = FastAPI(title="CV Summarizer & Job Matching System")
+app = FastAPI(title="CV Summarizer & Job Matching System", docs_url=None)
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=app.title + " - Swagger UI",
+        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
+        swagger_js_url="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js",
+        swagger_css_url="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css",
+    )
 
 app.add_middleware(
     CORSMiddleware,

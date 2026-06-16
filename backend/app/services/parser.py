@@ -134,7 +134,62 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
         return extract_text_from_docx(file_bytes)
     return clean_text(file_bytes.decode("utf-8", errors="ignore"))
 
-def extract_candidate_name(text: str, filename: str) -> str:
+def extract_candidate_name_from_pdf_bytes(file_bytes: bytes) -> str:
+    try:
+        import fitz
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        if len(doc) == 0: return ""
+        
+        page = doc[0]
+        blocks = page.get_text("dict").get("blocks", [])
+        
+        text_spans = []
+        for b in blocks:
+            if b.get("type") == 0:  # text block
+                for l in b.get("lines", []):
+                    # We might want to combine spans in the same line if they have the same size
+                    # But for simplicity, we'll just check each span
+                    line_text = ""
+                    max_size = 0.0
+                    for s in l.get("spans", []):
+                        line_text += s.get("text", "") + " "
+                        max_size = max(max_size, s.get("size", 0.0))
+                    
+                    line_text = line_text.strip()
+                    if len(line_text) > 2 and re.search(r'[A-Za-z]', line_text):
+                        text_spans.append((max_size, line_text))
+                            
+        if not text_spans: return ""
+        
+        # Sort by size descending
+        text_spans.sort(key=lambda x: x[0], reverse=True)
+        
+        ignore_words = ["curriculum", "vitae", "resume", "cv", "profile", "portfolio", "contact", "about", "me"]
+        
+        for size, text in text_spans:
+            text_lower = text.lower()
+            if not any(w in text_lower for w in ignore_words):
+                # Clean it up
+                name = re.sub(r"[^a-zA-Z\s.]", "", text)
+                name = re.sub(r"\s+", " ", name).strip()
+                words = name.split()
+                if 1 <= len(words) <= 5:
+                    return name.title()
+                    
+    except ImportError:
+        print("PyMuPDF (fitz) is not installed. Falling back to regex name extraction.")
+    except Exception as e:
+        print(f"Error extracting name from PDF fonts: {e}")
+        
+    return ""
+
+def extract_candidate_name(text: str, filename: str, file_bytes: bytes = None) -> str:
+    # 1. Try Font Size extraction if it's a PDF and bytes are provided
+    if file_bytes and filename.lower().endswith(".pdf"):
+        name_from_font = extract_candidate_name_from_pdf_bytes(file_bytes)
+        if name_from_font:
+            return name_from_font
+
     # Fallback name from filename (remove extension and replace separators)
     fallback_name = re.sub(r"\.[^.]+$", "", filename)
     fallback_name = re.sub(r"[-_]", " ", fallback_name).title().strip()

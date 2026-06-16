@@ -54,7 +54,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in rankings" :key="r.filename || r.name" :class="getScoreClass(r.score)">
+            <tr v-for="r in rankings" :key="r.filename || r.name" :class="[getScoreClass(r.score), 'clickable-row']" @click="openModal(r)">
               <td class="rank-col">
                 <span class="rank-badge" :class="getScoreClass(r.score)">#{{ r.rank }}</span>
               </td>
@@ -80,6 +80,35 @@
         </table>
       </div>
     </div>
+
+    <!-- Details Modal -->
+    <div v-if="selectedCandidate" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-content glass-panel">
+        <button class="close-btn" @click="closeModal">&times;</button>
+        <h3 class="modal-title">{{ selectedCandidate.name }}'s Details</h3>
+        
+        <div class="modal-body">
+          <div class="chart-container" v-if="chartData">
+            <h4>Domain Skills Analysis</h4>
+            <div class="radar-wrapper">
+              <Radar :data="chartData" :options="chartOptions" />
+            </div>
+          </div>
+
+          <div class="questions-container">
+            <h4>Interview Questions</h4>
+            <p class="subtitle" style="font-size:0.85rem;margin-bottom:1rem;">Generate tailored questions based on candidate's skills and gaps.</p>
+            <button @click="generateQuestions" class="btn-primary" :disabled="loadingQuestions">
+              {{ loadingQuestions ? 'Generating...' : 'Generate Questions' }}
+            </button>
+            
+            <ul v-if="generatedQuestions.length" class="questions-list">
+              <li v-for="(q, idx) in generatedQuestions" :key="idx" class="question-item">{{ q }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -87,6 +116,25 @@
 import { computed, ref } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config/api'
+import { Radar } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend
+} from 'chart.js'
+
+ChartJS.register(
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend
+)
 
 const selectedFiles = ref([])
 const jobDescription = ref('')
@@ -153,6 +201,103 @@ const rankCVs = async () => {
   }
   loading.value = false
 }
+
+// Modal State
+const selectedCandidate = ref(null)
+const chartData = ref(null)
+const generatedQuestions = ref([])
+const loadingQuestions = ref(false)
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    r: {
+      min: 0,
+      max: 100,
+      ticks: {
+        stepSize: 20,
+        backdropColor: 'transparent',
+      },
+      grid: {
+        color: 'rgba(3, 105, 161, 0.2)'
+      },
+      angleLines: {
+        color: 'rgba(3, 105, 161, 0.2)'
+      },
+      pointLabels: {
+        font: {
+          family: "'Inter', sans-serif",
+          size: 11
+        },
+        color: '#0369A1'
+      }
+    }
+  },
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        font: {
+          family: "'Inter', sans-serif"
+        }
+      }
+    }
+  }
+}
+
+const openModal = (candidate) => {
+  selectedCandidate.value = candidate
+  generatedQuestions.value = []
+  
+  if (candidate.skill_scores && Object.keys(candidate.skill_scores).length > 0) {
+    // Ambil top 8 skills untuk ditampilkan agar tidak terlalu padat
+    const sortedSkills = Object.entries(candidate.skill_scores)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      
+    chartData.value = {
+      labels: sortedSkills.map(s => s[0]),
+      datasets: [
+        {
+          label: 'Proficiency (%)',
+          backgroundColor: 'rgba(14, 165, 233, 0.2)',
+          borderColor: 'rgba(14, 165, 233, 1)',
+          pointBackgroundColor: 'rgba(14, 165, 233, 1)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(14, 165, 233, 1)',
+          data: sortedSkills.map(s => s[1])
+        }
+      ]
+    }
+  } else {
+    chartData.value = null
+  }
+}
+
+const closeModal = () => {
+  selectedCandidate.value = null
+}
+
+const generateQuestions = async () => {
+  if (!selectedCandidate.value) return
+  
+  loadingQuestions.value = true
+  try {
+    const reqData = {
+      matched_skills: selectedCandidate.value.matched_skills || [],
+      missing_skills: selectedCandidate.value.missing_skills || []
+    }
+    const res = await axios.post(`${API_BASE_URL}/api/hr/generate-questions`, reqData)
+    generatedQuestions.value = res.data.questions
+  } catch (error) {
+    console.error(error)
+    alert("Failed to generate questions")
+  }
+  loadingQuestions.value = false
+}
+
 </script>
 
 <style scoped>
@@ -385,5 +530,124 @@ const rankCVs = async () => {
   .ranking-table {
     min-width: 760px;
   }
+}
+
+/* Modal Styles */
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background-color: rgba(14, 165, 233, 0.05) !important;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 2rem;
+  border-radius: 16px;
+  animation: slideUp 0.3s ease;
+}
+
+.close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  font-size: 2rem;
+  background: none;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #EF4444;
+}
+
+.modal-title {
+  margin-top: 0;
+  color: #0369A1;
+  border-bottom: 2px solid rgba(3, 105, 161, 0.1);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .modal-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-container, .questions-container {
+  background: rgba(255, 255, 255, 0.5);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.radar-wrapper {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+.questions-container h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #0369A1;
+}
+
+.questions-list {
+  margin-top: 1.5rem;
+  padding-left: 0;
+  list-style-type: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.question-item {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 0.95rem;
+  color: #334155;
+  border-left: 4px solid #0EA5E9;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 </style>

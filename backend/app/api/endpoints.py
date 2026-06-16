@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form
+import asyncio
 from app.services.parser import extract_text, clean_text
 from app.services.nlp import get_similarity_score, match_cv_jd_hybrid, model
 from app.services.linkedin_scraper import scrape_linkedin_jobs
@@ -42,20 +43,19 @@ async def match_cv_to_job_detailed(
     domain: str = Form(...)
 ):
     file_bytes = await cv.read()
-    cv_text = extract_text(file_bytes, cv.filename)
-    
-    # Bersihkan job_description juga (hapus HTML, URL, noise)
-    jd_clean = clean_text(job_description)
+    filename = cv.filename
 
+    await asyncio.sleep(0.01)
+    cv_text = extract_text(file_bytes, filename)
+    jd_clean = clean_text(job_description)
     similarity_score = get_similarity_score(cv_text, jd_clean)
-    
-    # Hybrid semantic matching
-    matched_skills, missing_skills = match_cv_jd_hybrid(cv_text, jd_clean, domain)
+    matched_skills, missing_skills, skill_scores = match_cv_jd_hybrid(cv_text, jd_clean, domain)
     
     return {
         "similarity_score": similarity_score,
         "matched_skills": matched_skills,
         "missing_skills": missing_skills,
+        "skill_scores": skill_scores,
         "domain": domain
     }
 
@@ -63,11 +63,11 @@ async def match_cv_to_job_detailed(
 async def semantic_job_search(
     cv: UploadFile = File(...)
 ):
-    # Extract text from uploaded CV (extract_text already applies clean_text)
     file_bytes = await cv.read()
-    cv_text = extract_text(file_bytes, cv.filename)
+    filename = cv.filename
     
-    # Encode the CV text as the semantic query
+    await asyncio.sleep(0.01)
+    cv_text = extract_text(file_bytes, filename)
     query_emb = model.encode(cv_text, convert_to_tensor=True)
     
     jobs_collection = get_jobs_collection()
@@ -76,7 +76,7 @@ async def semantic_job_search(
     if not jobs:
         return []
     
-    # Batch compute similarities using util.cos_sim for stability
+    await asyncio.sleep(0.01)
     desc_embs = torch.tensor([job["description_embedding"] for job in jobs])
     similarities = util.cos_sim(query_emb, desc_embs)[0]
     
