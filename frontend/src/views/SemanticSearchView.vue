@@ -183,8 +183,8 @@ const handleSearch = async (query) => {
       elapsedTime.value = (Date.now() - startTime) / 1000
     }, 100)
     
-    // Subscribe to progress stream
-    eventSource = new EventSource(`${API_BASE_URL}/api/progress/${jobId}`)
+    const token = localStorage.getItem('token') || ''
+    eventSource = new EventSource(`${API_BASE_URL}/api/progress/${jobId}?token=${encodeURIComponent(token)}`)
     
     eventSource.onmessage = (event) => {
       try {

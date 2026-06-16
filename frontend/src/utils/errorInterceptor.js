@@ -32,6 +32,12 @@ axios.interceptors.response.use(
           break
         case 401:
           errorPayload.message = 'Access denied. Please check your credentials.'
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          delete axios.defaults.headers.common['Authorization']
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login'
+          }
           break
         case 403:
           errorPayload.message = 'Access forbidden. You do not have permission.'

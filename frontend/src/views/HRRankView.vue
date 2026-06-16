@@ -155,7 +155,7 @@
 
           <!-- Section 3 — Leaderboard -->
           <div class="section-container">
-            <LeaderboardCard :candidates="rankings" />
+            <LeaderboardCard :candidates="rankings" @select-candidate="openModal" />
           </div>
 
           <!-- Section 6 — Score Distribution Chart -->
@@ -198,10 +198,17 @@
         <h3 class="modal-title">{{ selectedCandidate.name }}'s Details</h3>
         
         <div class="modal-body">
-          <div class="chart-container" v-if="chartData">
+          <div class="chart-container">
             <h4>Domain Skills Analysis</h4>
-            <div class="radar-wrapper">
+            <div v-if="chartData" class="radar-wrapper">
               <Radar :data="chartData" :options="chartOptions" />
+            </div>
+            <div v-else class="empty-chart-fallback">
+              <div class="fallback-icon">📊</div>
+              <p class="fallback-title">No Skills to Analyze</p>
+              <p class="fallback-text">
+                Please provide a detailed job description containing specific skills to visualize the candidate's skill proficiency.
+              </p>
             </div>
           </div>
 
@@ -382,8 +389,8 @@ const rankCVs = async () => {
       elapsedTime.value = (Date.now() - startTime) / 1000
     }, 100)
     
-    // Subscribe to SSE progress channel
-    eventSource = new EventSource(`${API_BASE_URL}/api/progress/${jobId}`)
+    const token = localStorage.getItem('token') || ''
+    eventSource = new EventSource(`${API_BASE_URL}/api/progress/${jobId}?token=${encodeURIComponent(token)}`)
     
     eventSource.onmessage = (event) => {
       try {
@@ -1073,5 +1080,36 @@ const generateQuestions = async () => {
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+.empty-chart-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 300px;
+  padding: 1.5rem;
+}
+
+.fallback-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 8px 16px rgba(14, 165, 233, 0.15));
+}
+
+.fallback-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-soft);
+  margin: 0 0 0.5rem;
+}
+
+.fallback-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 280px;
 }
 </style>

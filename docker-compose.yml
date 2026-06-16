@@ -39,6 +39,10 @@ services:
       - MODEL_MAIN=${MODEL_MAIN}
       - MODEL_BI_ENCODER=${MODEL_BI_ENCODER}
       - HF_HOME=/root/.cache/huggingface
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     depends_on:
       - mongodb
 

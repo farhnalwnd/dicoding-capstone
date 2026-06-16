@@ -1,6 +1,8 @@
-from fastapi import APIRouter, UploadFile, File, Form, Request
+from fastapi import APIRouter, UploadFile, File, Form, Request, Depends
 from typing import Optional
 import asyncio
+
+from app.core.auth import get_current_user
 
 from app.services.parser import extract_text, clean_text
 from app.services.nlp import (
@@ -25,7 +27,8 @@ router = APIRouter()
 async def scrape_and_recommend(
     time_range: str = Form("1w"),
     keyword: str = Form("Python Developer"),
-    location: str = Form("Jakarta")
+    location: str = Form("Jakarta"),
+    current_user: dict = Depends(get_current_user)
 ):
     start_time = time.time()
 
@@ -84,7 +87,8 @@ async def scrape_and_recommend(
 async def match_cv_to_job_detailed(
     cv: UploadFile = File(...),
     job_description: str = Form(...),
-    domain: str = Form(...)
+    domain: str = Form(...),
+    current_user: dict = Depends(get_current_user)
 ):
     start_time = time.time()
 
@@ -208,7 +212,8 @@ async def perform_candidate_semantic_search(query_str: str):
 async def semantic_job_search(
     request: Request,
     cv: Optional[UploadFile] = File(None),
-    query: Optional[str] = Form(None)
+    query: Optional[str] = Form(None),
+    current_user: dict = Depends(get_current_user)
 ):
     content_type = request.headers.get("content-type", "")
 
@@ -310,30 +315,30 @@ from app.services.explainability import build_match_explanation
 class SemanticSearchRequest(BaseModel):
     query: str
 
-async def run_match_detailed_task(job_id: str, file_bytes: bytes, filename: str, job_description: str, domain: str):
+def run_match_detailed_task(job_id: str, file_bytes: bytes, filename: str, job_description: str, domain: str):
     try:
         progress_manager.update_progress(job_id, 10, "Upload CV")
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 20, "Parse Resume")
         cv_text = extract_text(file_bytes, filename)
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 35, "Extracting Skills")
         jd_clean = clean_text(job_description)
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 50, "Generating Embeddings")
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 70, "Match CV & Job Description")
         similarity_score = get_similarity_score(cv_text, jd_clean)
-        matched_skills, missing_skills = match_cv_jd_hybrid(
+        matched_skills, missing_skills, skill_scores = match_cv_jd_hybrid(
             cv_text=cv_text,
             jd_text=jd_clean,
             domain=domain
         )
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 85, "Generating Explainability")
 
@@ -359,25 +364,26 @@ async def run_match_detailed_task(job_id: str, file_bytes: bytes, filename: str,
             missing_skills=missing_skills,
             domain_relevance=domain_relevance
         )
-        await asyncio.sleep(0.3)
+        result["skill_scores"] = skill_scores
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 95, "Finalizing Results")
         result["domain"] = domain
-        await asyncio.sleep(0.2)
+        time.sleep(0.2)
         
         progress_manager.complete_job(job_id, result)
     except Exception as e:
         progress_manager.fail_job(job_id, f"Failed to analyze: {str(e)}")
 
 
-async def run_semantic_search_task(job_id: str, query_str: str):
+def run_semantic_search_task(job_id: str, query_str: str):
     try:
         progress_manager.update_progress(job_id, 10, "Parsing Query")
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 35, "Generating Embedding")
         query_emb = model.encode(query_str, convert_to_tensor=True)
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 60, "Semantic Search")
         profiles = [c["profile"] for c in CANDIDATES_POOL]
@@ -386,7 +392,7 @@ async def run_semantic_search_task(job_id: str, query_str: str):
         
         if similarities.numel() < len(CANDIDATES_POOL):
             similarities = torch.full((len(CANDIDATES_POOL),), float(similarities[0]))
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 85, "Ranking Results")
         results = []
@@ -398,7 +404,7 @@ async def run_semantic_search_task(job_id: str, query_str: str):
                 "skills": c["skills"]
             })
         results.sort(key=lambda x: x["similarity_score"], reverse=True)
-        await asyncio.sleep(0.2)
+        time.sleep(0.2)
         
         progress_manager.complete_job(job_id, {"results": results})
     except Exception as e:
@@ -409,7 +415,8 @@ async def start_match_detailed(
     background_tasks: BackgroundTasks,
     cv: UploadFile = File(...),
     job_description: str = Form(...),
-    domain: str = Form(...)
+    domain: str = Form(...),
+    current_user: dict = Depends(get_current_user)
 ):
     REQUEST_COUNT.labels(endpoint="match_detailed_start").inc()
     MATCH_ANALYSIS_COUNT.inc()
@@ -431,7 +438,8 @@ async def start_match_detailed(
 @router.post("/jobs/semantic-search/start")
 async def start_semantic_search(
     req: SemanticSearchRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user)
 ):
     REQUEST_COUNT.labels(endpoint="semantic_search_start").inc()
     SEMANTIC_SEARCH_COUNT.inc()
@@ -494,7 +502,7 @@ async def event_generator(job_id: str):
         await asyncio.sleep(0.2)
 
 @router.get("/progress/{job_id}")
-async def get_progress_stream(job_id: str):
+async def get_progress_stream(job_id: str, current_user: dict = Depends(get_current_user)):
     headers = {
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
@@ -508,7 +516,7 @@ async def get_progress_stream(job_id: str):
     )
 
 @router.get("/result/{job_id}")
-async def get_job_result(job_id: str):
+async def get_job_result(job_id: str, current_user: dict = Depends(get_current_user)):
     job = progress_manager.get_job(job_id)
     if not job:
         return {"error": "Job not found"}

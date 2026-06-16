@@ -11,6 +11,8 @@
         :key="candidate.filename || candidate.name" 
         class="leaderboard-item"
         :class="getItemClass(index + 1)"
+        style="cursor: pointer;"
+        @click="$emit('select-candidate', candidate)"
       >
         <div class="rank-badge-col">
           <span v-if="index === 0" class="emoji-badge gold-glow">🥇</span>
@@ -43,6 +45,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const emit = defineEmits(['select-candidate'])
 
 const getItemClass = (rank) => {
   if (rank === 1) return 'rank-1-gold'

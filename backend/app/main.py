@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.endpoints import router as api_router
 from app.api.hr_endpoints import router as hr_router
 from app.api.jobs_endpoints import router as jobs_router
+from app.api.auth_endpoints import router as auth_router
 from prometheus_client import make_asgi_app
 import os
 
@@ -38,6 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router, prefix="/api/auth")
 app.include_router(api_router, prefix="/api")
 app.include_router(hr_router, prefix="/api")
 app.include_router(jobs_router, prefix="/api")

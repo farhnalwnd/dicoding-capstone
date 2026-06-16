@@ -1,6 +1,7 @@
-from fastapi import APIRouter, UploadFile, File, Form, Body, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, Body, BackgroundTasks, Depends
 from typing import List, Tuple, Dict, Any
 from pydantic import BaseModel
+from app.core.auth import require_role
 import time
 import asyncio
 from sklearn.cluster import KMeans
@@ -89,7 +90,8 @@ def compute_candidate_score(
 async def rank_candidates(
     cvs: List[UploadFile] = File(...),
     job_description: str = Form(...),
-    domain: str = Form("general")
+    domain: str = Form("general"),
+    current_user: dict = Depends(require_role("hr"))
 ):
     start_time = time.time()
 
@@ -168,7 +170,8 @@ async def rank_candidates(
 @router.post("/hr/cluster")
 async def cluster_candidates(
     cvs: List[UploadFile] = File(...),
-    num_clusters: int = Form(3)
+    num_clusters: int = Form(3),
+    current_user: dict = Depends(require_role("hr"))
 ):
     start_time = time.time()
 
@@ -216,7 +219,7 @@ async def cluster_candidates(
 # Real-Time SSE endpoints & Background Workers
 # ==========================================
 
-async def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_description: str, domain: str):
+def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_description: str, domain: str):
     try:
         progress_manager.update_progress(job_id, 10, "Parsing CVs")
         jd_clean = clean_text(job_description)
@@ -226,7 +229,7 @@ async def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_d
         for file_bytes, filename in cv_files:
             cv_text = extract_text(file_bytes, filename)
             parsed_cvs.append((cv_text, filename))
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 30, "Extracting Skills")
         candidates = []
@@ -258,23 +261,23 @@ async def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_d
                 "domain": domain,
                 "filename": filename
             })
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 50, "Embedding Generation")
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 75, "Ranking Candidates")
         candidates.sort(key=lambda x: x["score"], reverse=True)
         for i, candidate in enumerate(candidates, start=1):
             candidate["rank"] = i
-        await asyncio.sleep(0.2)
+        time.sleep(0.2)
         
         progress_manager.complete_job(job_id, candidates)
     except Exception as e:
         progress_manager.fail_job(job_id, f"Failed to rank: {str(e)}")
 
 
-async def run_hr_cluster_task(job_id: str, cv_files: List[Tuple[bytes, str]], num_clusters: int):
+def run_hr_cluster_task(job_id: str, cv_files: List[Tuple[bytes, str]], num_clusters: int):
     try:
         progress_manager.update_progress(job_id, 10, "Parsing CVs")
         texts = []
@@ -283,10 +286,10 @@ async def run_hr_cluster_task(job_id: str, cv_files: List[Tuple[bytes, str]], nu
             cv_text = extract_text(file_bytes, filename)
             texts.append(cv_text)
             filenames.append(filename)
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 30, "Generating Embeddings")
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 60, "Clustering Candidates")
         actual_num_clusters = num_clusters
@@ -297,7 +300,7 @@ async def run_hr_cluster_task(job_id: str, cv_files: List[Tuple[bytes, str]], nu
         kmeans = KMeans(n_clusters=actual_num_clusters, random_state=42, n_init=10)
         kmeans.fit(embeddings)
         labels = kmeans.labels_
-        await asyncio.sleep(0.3)
+        time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 85, "Building Clusters")
         clusters = {i: [] for i in range(actual_num_clusters)}
@@ -329,7 +332,7 @@ async def run_hr_cluster_task(job_id: str, cv_files: List[Tuple[bytes, str]], nu
                 "suggested_label": suggested_label,
                 "candidates": [item["filename"] for item in items]
             })
-        await asyncio.sleep(0.2)
+        time.sleep(0.2)
         
         progress_manager.complete_job(job_id, result)
     except Exception as e:
@@ -340,7 +343,8 @@ async def start_rank_candidates(
     background_tasks: BackgroundTasks,
     cvs: List[UploadFile] = File(...),
     job_description: str = Form(...),
-    domain: str = Form("general")
+    domain: str = Form("general"),
+    current_user: dict = Depends(require_role("hr"))
 ):
     REQUEST_COUNT.labels(endpoint="hr_rank_start").inc()
     HR_RANKING_COUNT.inc()
@@ -365,7 +369,8 @@ async def start_rank_candidates(
 async def start_cluster_candidates(
     background_tasks: BackgroundTasks,
     cvs: List[UploadFile] = File(...),
-    num_clusters: int = Form(3)
+    num_clusters: int = Form(3),
+    current_user: dict = Depends(require_role("hr"))
 ):
     REQUEST_COUNT.labels(endpoint="hr_cluster_start").inc()
     CLUSTERING_COUNT.inc()
@@ -385,7 +390,10 @@ async def start_cluster_candidates(
     return {"job_id": job_id}
 
 @router.post("/hr/generate-questions")
-async def generate_interview_questions(req: QuestionRequest):
+async def generate_interview_questions(
+    req: QuestionRequest,
+    current_user: dict = Depends(require_role("hr"))
+):
     questions = []
     
     for skill in req.matched_skills[:3]:

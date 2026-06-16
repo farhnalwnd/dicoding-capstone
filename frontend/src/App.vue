@@ -9,7 +9,7 @@
       <span class="mesh-grid"></span>
     </div>
 
-    <nav class="navbar">
+    <nav v-if="showNavbar" class="navbar">
       <div class="nav-inner">
         <router-link to="/" class="nav-brand" @click="closeMenus">
           <img class="brand-icon" src="/icon.svg" alt="CV Matcher Pro logo" />
@@ -39,7 +39,17 @@
             Home
           </router-link>
 
-          <div class="dropdown" :class="{ 'is-open': openDropdown === 'jobseeker' }">
+          <router-link
+            v-if="isLoggedIn"
+            to="/dashboard"
+            class="nav-link"
+            active-class="is-active"
+            @click="closeMenus"
+          >
+            Dashboard
+          </router-link>
+
+          <div v-if="isLoggedIn && isJobSeekerRole" class="dropdown" :class="{ 'is-open': openDropdown === 'jobseeker' }">
             <button
               class="dropdown-btn"
               :class="{ 'is-active': isJobSeekerActive }"
@@ -50,9 +60,6 @@
               <span class="arrow">▾</span>
             </button>
             <div class="dropdown-content">
-              <router-link to="/jobseeker/scrape" active-class="is-active" @click="closeMenus">
-                Scrape Jobs
-              </router-link>
               <router-link to="/jobseeker/analyze" active-class="is-active" @click="closeMenus">
                 CV-JD Analysis
               </router-link>
@@ -62,7 +69,7 @@
             </div>
           </div>
 
-          <div class="dropdown" :class="{ 'is-open': openDropdown === 'hr' }">
+          <div v-if="isLoggedIn && isHr" class="dropdown" :class="{ 'is-open': openDropdown === 'hr' }">
             <button
               class="dropdown-btn"
               :class="{ 'is-active': isHrActive }"
@@ -81,6 +88,47 @@
               </router-link>
             </div>
           </div>
+
+          <!-- Unauthenticated Menu Buttons -->
+          <router-link
+            v-if="!isLoggedIn"
+            to="/login"
+            class="nav-link nav-btn-login"
+            @click="closeMenus"
+          >
+            Login
+          </router-link>
+          <router-link
+            v-if="!isLoggedIn"
+            to="/register"
+            class="nav-btn-register"
+            @click="closeMenus"
+          >
+            Register
+          </router-link>
+
+          <!-- Authenticated User Dropdown Menu -->
+          <div v-if="isLoggedIn" class="dropdown user-dropdown" :class="{ 'is-open': openDropdown === 'user' }">
+            <button
+              class="dropdown-btn user-profile-btn"
+              type="button"
+              @click="toggleDropdown('user')"
+            >
+              <div class="nav-avatar">{{ userInitial }}</div>
+              <span class="nav-username">{{ userName }}</span>
+              <span class="arrow">▾</span>
+            </button>
+            <div class="dropdown-content user-dropdown-content">
+              <div class="user-info-header">
+                <p class="header-name">{{ userName }}</p>
+                <p class="header-role">{{ isHr ? 'HR Recruiter' : 'Job Seeker' }}</p>
+              </div>
+              <button class="dropdown-logout-btn" @click="handleLogout">
+                <span class="logout-icon">🚪</span> Logout
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </nav>
@@ -92,10 +140,10 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import ToastNotification from './components/ToastNotification.vue'
-import { provide } from 'vue'
+import { authState, isAuthenticated, isHR, isJobSeeker, logout } from './stores/auth'
 
 const toast = ref(null)
 provide('toast', {
@@ -116,6 +164,21 @@ const currentPageTitle = computed(() => {
   const appName = 'CV Matcher Pro'
   return route.meta?.title ? `${route.meta.title} | ${appName}` : appName
 })
+
+const isLoggedIn = computed(() => isAuthenticated.value)
+const isHr = computed(() => isHR.value)
+const isJobSeekerRole = computed(() => isJobSeeker.value)
+const userName = computed(() => authState.user?.name || 'User')
+const userInitial = computed(() => userName.value.charAt(0).toUpperCase())
+
+const showNavbar = computed(() => {
+  return route.path !== '/login' && route.path !== '/register'
+})
+
+function handleLogout() {
+  closeMenus()
+  logout()
+}
 
 function toggleDropdown(name) {
   openDropdown.value = openDropdown.value === name ? null : name
@@ -734,5 +797,110 @@ label {
   .btn-danger {
     width: 100%;
   }
+}
+
+/* Custom Auth Navigation Elements */
+.nav-btn-login {
+  color: var(--primary-dark) !important;
+}
+
+.nav-btn-register {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 48%, var(--indigo) 100%);
+  color: #FFFFFF !important;
+  font-weight: 800;
+  font-size: 0.94rem;
+  padding: 0.68rem 1.35rem;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.2);
+  transition: all 0.2s ease;
+}
+
+.nav-btn-register:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.3);
+}
+
+.nav-btn-register:active {
+  transform: translateY(0);
+}
+
+.user-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-avatar {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--indigo) 100%);
+  color: #FFFFFF;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(3, 105, 161, 0.15);
+}
+
+.nav-username {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-dropdown-content {
+  right: 0;
+  left: auto;
+  min-width: 200px;
+}
+
+.user-info-header {
+  padding: 0.65rem 0.95rem;
+  border-bottom: 1px solid rgba(14, 116, 144, 0.08);
+  margin-bottom: 0.35rem;
+}
+
+.header-name {
+  margin: 0;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+
+.header-role {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.dropdown-logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: transparent;
+  border: none;
+  padding: 0.82rem 0.95rem;
+  color: #DC2626;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.dropdown-logout-btn:hover {
+  background: rgba(220, 38, 38, 0.08);
+  transform: translateX(2px);
 }
 </style>
