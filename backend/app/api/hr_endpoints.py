@@ -1,7 +1,22 @@
-from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks
-from typing import List, Tuple
+from fastapi import APIRouter, UploadFile, File, Form, Body, BackgroundTasks
+from typing import List, Tuple, Dict, Any
+from pydantic import BaseModel
+import time
+import asyncio
+from sklearn.cluster import KMeans
+from sentence_transformers import util
+
 from app.services.parser import extract_text, extract_candidate_name, clean_text
-from app.services.nlp import cluster_documents, get_similarity_score, match_cv_jd_hybrid, extract_phrases, get_skill_embeddings_for_skills, model, has_skill_exact
+from app.services.nlp import (
+    cluster_documents,
+    get_similarity_score,
+    match_cv_jd_hybrid,
+    extract_phrases,
+    get_skill_embeddings_for_skills,
+    model,
+    has_skill_exact,
+    extract_jd_target_skills
+)
 from app.core.domain_loader import load_domain_config
 from app.core.metrics import (
     REQUEST_COUNT,
@@ -10,12 +25,12 @@ from app.core.metrics import (
     CLUSTERING_COUNT
 )
 from app.services.progress import progress_manager
-from sklearn.cluster import KMeans
-from sentence_transformers import util
-import time
-import asyncio
 
 router = APIRouter()
+
+class QuestionRequest(BaseModel):
+    matched_skills: List[str]
+    missing_skills: List[str]
 
 
 def compute_candidate_score(
@@ -69,6 +84,7 @@ def compute_candidate_score(
 
     return final_score, round(coverage_ratio, 2), domain_relevance
 
+
 @router.post("/hr/rank")
 async def rank_candidates(
     cvs: List[UploadFile] = File(...),
@@ -84,45 +100,26 @@ async def rank_candidates(
     HR_RANKING_COUNT.inc()
 
     try:
-
         candidates = []
 
-        # Clean job description
-        jd_clean = clean_text(
-            job_description
-        )
+        # Clean job description to remove HTML tags, URLs, and noise
+        jd_clean = clean_text(job_description)
+        precomputed_target_skills = extract_jd_target_skills(jd_clean, domain)
 
         for cv in cvs:
+            await asyncio.sleep(0.01)  # Yield to event loop to prevent blocking
 
             file_bytes = await cv.read()
+            cv_text = extract_text(file_bytes, cv.filename)
+            candidate_name = extract_candidate_name(cv_text, cv.filename, file_bytes)
 
-            cv_text = extract_text(
-                file_bytes,
-                cv.filename
+            semantic_score = get_similarity_score(cv_text, jd_clean)
+
+            matched_skills, missing_skills, skill_scores = match_cv_jd_hybrid(
+                cv_text, jd_clean, domain, precomputed_target_skills=precomputed_target_skills
             )
 
-            candidate_name = (
-                extract_candidate_name(
-                    cv_text,
-                    cv.filename
-                )
-            )
-
-            semantic_score = (
-                get_similarity_score(
-                    cv_text,
-                    jd_clean
-                )
-            )
-
-            matched_skills, missing_skills = (
-                match_cv_jd_hybrid(
-                    cv_text,
-                    jd_clean,
-                    domain
-                )
-            )
-
+            # Use Tito's compute_candidate_score formula
             final_score, coverage_ratio, domain_relevance = compute_candidate_score(
                 semantic_score=semantic_score,
                 matched_skills=matched_skills,
@@ -140,11 +137,12 @@ async def rank_candidates(
                 "missing_skills_count": len(missing_skills),
                 "matched_skills": matched_skills,
                 "missing_skills": missing_skills,
+                "skill_scores": skill_scores,
                 "domain": domain,
                 "filename": cv.filename
             })
 
-        # Sort descending
+        # Sort descending by score
         candidates.sort(
             key=lambda x: x["score"],
             reverse=True
@@ -160,12 +158,12 @@ async def rank_candidates(
         return candidates
 
     finally:
-
         REQUEST_LATENCY.labels(
             endpoint="hr_rank"
         ).observe(
             time.time() - start_time
         )
+
 
 @router.post("/hr/cluster")
 async def cluster_candidates(
@@ -222,6 +220,7 @@ async def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_d
     try:
         progress_manager.update_progress(job_id, 10, "Parsing CVs")
         jd_clean = clean_text(job_description)
+        precomputed_target_skills = extract_jd_target_skills(jd_clean, domain)
         
         parsed_cvs = []
         for file_bytes, filename in cv_files:
@@ -234,7 +233,9 @@ async def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_d
         for cv_text, filename in parsed_cvs:
             candidate_name = extract_candidate_name(cv_text, filename)
             semantic_score = get_similarity_score(cv_text, jd_clean)
-            matched_skills, missing_skills = match_cv_jd_hybrid(cv_text, jd_clean, domain)
+            matched_skills, missing_skills, skill_scores = match_cv_jd_hybrid(
+                cv_text, jd_clean, domain, precomputed_target_skills=precomputed_target_skills
+            )
 
             final_score, coverage_ratio, domain_relevance = compute_candidate_score(
                 semantic_score=semantic_score,
@@ -253,6 +254,7 @@ async def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_d
                 "missing_skills_count": len(missing_skills),
                 "matched_skills": matched_skills,
                 "missing_skills": missing_skills,
+                "skill_scores": skill_scores,
                 "domain": domain,
                 "filename": filename
             })
@@ -270,6 +272,7 @@ async def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_d
         progress_manager.complete_job(job_id, candidates)
     except Exception as e:
         progress_manager.fail_job(job_id, f"Failed to rank: {str(e)}")
+
 
 async def run_hr_cluster_task(job_id: str, cv_files: List[Tuple[bytes, str]], num_clusters: int):
     try:
@@ -344,6 +347,7 @@ async def start_rank_candidates(
     
     cv_files = []
     for cv in cvs:
+        await asyncio.sleep(0.01)
         file_bytes = await cv.read()
         cv_files.append((file_bytes, cv.filename))
         
@@ -379,3 +383,22 @@ async def start_cluster_candidates(
         num_clusters
     )
     return {"job_id": job_id}
+
+@router.post("/hr/generate-questions")
+async def generate_interview_questions(req: QuestionRequest):
+    questions = []
+    
+    for skill in req.matched_skills[:3]:
+        questions.append(f"You have experience with {skill}. Can you describe a challenging project where you successfully utilized it?")
+        questions.append(f"What were some of the common issues you faced when working with {skill}, and how did you resolve them?")
+        
+    for skill in req.missing_skills[:3]:
+        questions.append(f"The role requires familiarity with {skill}, which isn't prominent in your CV. How would you approach learning or applying it?")
+        questions.append(f"Have you worked with any technologies or concepts similar to {skill}?")
+        
+    if not questions:
+        questions.append("Can you walk me through your most recent relevant project?")
+        questions.append("How do you handle learning new technologies on the job?")
+        
+    return {"questions": questions}
+

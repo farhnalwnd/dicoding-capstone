@@ -119,7 +119,7 @@ def test_match_cv_jd_hybrid_clean(monkeypatch):
     I build APIs using REST API standards.
     """
     
-    matched, missing = match_cv_jd_hybrid(cv_text, jd_text, "it")
+    matched, missing, _ = match_cv_jd_hybrid(cv_text, jd_text, "it")
     
     # Verify expected valid skills are present
     expected_skills = {"Python", "FastAPI", "REST API", "Docker", "Kubernetes", "CI/CD", "Pytest", "Git", "MongoDB"}
@@ -150,7 +150,7 @@ def test_normalization_matching(monkeypatch):
     jd_text = "We need experience in REST, RESTful API, RESTful APIs, CI, and NLP models, Setup, Title, Practical, Familiarity."
     cv_text = "Experienced in REST API, CI/CD, and NLP."
     
-    matched, missing = match_cv_jd_hybrid(cv_text, jd_text, "it")
+    matched, missing, _ = match_cv_jd_hybrid(cv_text, jd_text, "it")
     
     # Check that they normalized to the whitelisted terms
     assert "REST API" in matched

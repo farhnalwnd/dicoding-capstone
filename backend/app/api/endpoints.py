@@ -1,5 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, Request
 from typing import Optional
+import asyncio
+
 from app.services.parser import extract_text, clean_text
 from app.services.nlp import (
     analyze_cv_jd,
@@ -209,6 +211,7 @@ async def semantic_job_search(
     query: Optional[str] = Form(None)
 ):
     content_type = request.headers.get("content-type", "")
+
     
     if "application/json" in content_type:
         try:

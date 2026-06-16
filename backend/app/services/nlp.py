@@ -49,7 +49,7 @@ def analyze_cv_jd(
         jd_text
     )
 
-    matched_skills, missing_skills = (
+    matched_skills, missing_skills, skill_scores = (
         match_cv_jd_hybrid(
             cv_text=cv_text,
             jd_text=jd_text,
@@ -73,12 +73,15 @@ def analyze_cv_jd(
     else:
         domain_relevance = 0.0
 
-    return build_match_explanation(
+    explanation = build_match_explanation(
         similarity_score=similarity_score,
         matched_skills=matched_skills,
         missing_skills=missing_skills,
         domain_relevance=domain_relevance
     )
+    explanation["skill_scores"] = skill_scores
+    return explanation
+
 
 def extract_phrases(text: str) -> List[str]:
     from app.services.parser import STOPWORDS
@@ -310,29 +313,30 @@ def deduplicate_skills(skills: List[str], domain_skills: List[str] = None) -> Li
                     
     return [skills[i] for i in range(n) if i not in to_remove]
 
-
-def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str) -> Tuple[List[str], List[str]]:
+def extract_jd_target_skills(jd_text: str, domain: str) -> List[str]:
     """
-    Hybrid semantic matching:
-    - Target list of skills: Union of phrases extracted from JD and domain skills present in JD.
-    - Check match against CV using soft exact matching first, with semantic matching as fallback.
+    Extract exact valid skills from JD text using the Master Skills list.
+    This guarantees NO irrelevant skills (like "S1", "mampu bekerja") are extracted.
     """
-    from app.core.domain_loader import load_domain_config
+    from app.core.domain_loader import get_master_skills, load_domain_config
     
+    master_skills = get_master_skills()
     config = load_domain_config(domain)
     domain_skills = config.get("skills", [])
-    domain_skill_set = set(domain_skills)
-    threshold_direct = config.get("threshold_direct_match", 0.75)
-    threshold_master = config.get("threshold_master_match", 0.82)
     
-    # Extract phrases from JD and CV
-    jd_phrases = extract_phrases(jd_text)
-    cv_phrases = extract_phrases(cv_text)
-    
-    # Target skills/phrases to match (all required by JD)
     target_skills = set()
     
-    # 2. Check exact matches of normalization variations in JD
+    # Check all master skills if they exist exactly in the JD text
+    for skill in master_skills:
+        if has_skill_exact(skill, jd_text):
+            target_skills.add(skill)
+            
+    # As a fallback, ensure any domain skills present in JD are included
+    for skill in domain_skills:
+        if has_skill_exact(skill, jd_text):
+            target_skills.add(skill)
+            
+    # HEAD normalization safety fallback
     NORMALIZATION_MAP = {
         "rest": "REST API",
         "rest api": "REST API",
@@ -353,63 +357,71 @@ def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str) -> Tuple[List[st
     }
     for var_name, norm_name in NORMALIZATION_MAP.items():
         if has_skill_exact(var_name, jd_text):
-            target_skills.add(norm_name)
+            if norm_name in master_skills or norm_name in domain_skills:
+                target_skills.add(norm_name)
             
-    # Selalu masukkan skill dari domain config yang tertulis jelas (exact match) di dalam JD
-    for skill in domain_skills:
-        if has_skill_exact(skill, jd_text):
-            target_skills.add(skill)
-            
-    # Process extracted phrases, keeping only whitelisted or normalized ones (WHITELIST FIRST)
-    domain_skills_lower = {s.lower() for s in domain_skills}
-    for phrase in jd_phrases:
-        phrase_clean = clean_skill_phrase(phrase)
-        phrase_lower = phrase_clean.lower()
+    return list(target_skills)
+
+def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_target_skills: List[str] = None) -> Tuple[List[str], List[str], Dict[str, float]]:
+    """
+    Hybrid semantic matching using batch encoding for significant performance improvements.
+    Uses precomputed target skills to avoid extracting JD phrases for every candidate.
+    """
+    from app.core.domain_loader import load_domain_config
+    
+    config = load_domain_config(domain)
+    domain_skills = config.get("skills", [])
+    domain_skill_set = set(domain_skills)
+    threshold_direct = config.get("threshold_direct_match", 0.75)
+    threshold_master = config.get("threshold_master_match", 0.82)
+    
+    # 1. Determine target skills from JD (use precomputed if available)
+    if precomputed_target_skills is not None:
+        target_skills = precomputed_target_skills
+    else:
+        target_skills = extract_jd_target_skills(jd_text, domain)
         
-        if phrase_lower in NORMALIZATION_MAP:
-            target_skills.add(NORMALIZATION_MAP[phrase_lower])
-        elif phrase_lower in domain_skills_lower:
-            orig_skill = next((s for s in domain_skills if s.lower() == phrase_lower), phrase_clean)
-            target_skills.add(orig_skill)
-            
-    # Ensure all target_skills are cleaned, valid, and belong to domain_skills or normalized ones
-    valid_targets = set()
-    for skill in target_skills:
-        skill_clean = clean_skill_phrase(skill)
-        if skill_clean.lower() in domain_skills_lower or skill_clean in NORMALIZATION_MAP.values():
-            valid_targets.add(skill_clean)
-    target_skills = valid_targets
-            
     if not target_skills:
-        return [], []
+        return [], [], {}
         
+    # 2. Extract phrases from CV
+    cv_phrases = extract_phrases(cv_text)
+    
     matched_with_scores = {}
     missing_skills_with_scores = {}
+    semantic_check_skills = []
     
-    # Pre-encode CV phrases if available for semantic fallback
-    cv_phrase_embeddings = None
-    if cv_phrases:
-        cv_phrase_embeddings = model.encode(cv_phrases, convert_to_tensor=True)
-        
+    # 3. Exact matching first
     for skill in target_skills:
-        # 1. Soft Exact Match check in CV
         if has_skill_exact(skill, cv_text):
             matched_with_scores[skill] = 100.0
-            continue
+        else:
+            semantic_check_skills.append(skill)
             
-        # 2. Semantic Fallback check
-        threshold = threshold_master if skill in domain_skills else threshold_direct
+    # 4. Batch Semantic matching for missing skills against CV phrases
+    if semantic_check_skills and cv_phrases:
+        # Batch encode skills and CV phrases
+        skill_embs = model.encode(semantic_check_skills, convert_to_tensor=True)
+        cv_phrase_embs = model.encode(cv_phrases, convert_to_tensor=True)
         
-        if cv_phrase_embeddings is not None and cv_phrases:
-            skill_emb = model.encode(skill, convert_to_tensor=True)
-            similarities = util.cos_sim(skill_emb, cv_phrase_embeddings)[0]
-            max_sim = similarities.max().item()
+        # Calculate cosine similarity for all combinations at once (Batching)
+        # similarities shape: (len(semantic_check_skills), len(cv_phrases))
+        similarities = util.cos_sim(skill_embs, cv_phrase_embs)
+        
+        # Get max similarity for each skill
+        max_sims = similarities.max(dim=1).values.tolist()
+        
+        for i, skill in enumerate(semantic_check_skills):
+            max_sim = max_sims[i]
+            threshold = threshold_master if skill in domain_skills else threshold_direct
             
             if max_sim >= threshold:
                 matched_with_scores[skill] = round(max_sim * 100, 2)
             else:
                 missing_skills_with_scores[skill] = round(max_sim * 100, 2)
-        else:
+    else:
+        # If no cv phrases extracted, all remaining skills are missing with 0 score
+        for skill in semantic_check_skills:
             missing_skills_with_scores[skill] = 0.0
             
     # Sort matched_skills by score descending, exact matches (100.0) first
@@ -426,7 +438,11 @@ def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str) -> Tuple[List[st
     matched_skills = matched_skills[:15]
     missing_skills = missing_skills[:15]
     
-    return matched_skills, missing_skills
+    # Combine scores for radar chart or analysis
+    skill_scores = {**matched_with_scores, **missing_skills_with_scores}
+    
+    return matched_skills, missing_skills, skill_scores
+
 
 def cluster_documents(texts: List[str], filenames: List[str], num_clusters: int = 3) -> List[Dict[str, Any]]:
     if not texts:

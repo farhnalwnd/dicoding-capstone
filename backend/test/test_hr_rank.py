@@ -20,8 +20,9 @@ def test_hr_rank(monkeypatch, client):
 
     monkeypatch.setattr(
         "app.api.hr_endpoints.match_cv_jd_hybrid",
-        lambda *args, **kwargs: (["Python", "FastAPI"], ["Docker"])
+        lambda *args, **kwargs: (["Python", "FastAPI"], ["Docker"], {"Python": 100.0, "FastAPI": 100.0, "Docker": 0.0})
     )
+
 
     files = [
         (
@@ -51,4 +52,4 @@ def test_hr_rank(monkeypatch, client):
 
     assert len(result) == 1
     assert result[0]["name"] == "John Doe"
-    assert result[0]["score"] == 86.5  # (90 * 0.85) + (2/3 * 100 * 0.15) = 76.5 + 10 = 86.5
+    assert result[0]["score"] == 66.25  # 70% Semantic (63.0) + 10% Effective Coverage (2.5) + 20% Domain Relevance (0.75)

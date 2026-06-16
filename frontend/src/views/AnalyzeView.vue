@@ -183,6 +183,7 @@ const handleFileSelect = (e) => {
   selectedFile.value = file
 }
 
+
 const getScoreClass = (score) => {
   if (score < 30) return 'score-danger'
   if (score < 50) return 'score-warning'
@@ -478,7 +479,6 @@ const matchDetailed = async () => {
   background-clip: text;
   color: transparent;
 }
-
 .empty-state-panel {
   display: flex;
   flex-direction: column;
@@ -502,4 +502,5 @@ const matchDetailed = async () => {
   line-height: 1.6;
   margin: 0;
 }
+
 </style>
