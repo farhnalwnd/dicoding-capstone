@@ -1,6 +1,6 @@
 <template>
   <div class="chart-container-inner">
-    <h4 class="chart-inner-title">💼 Top Job Domains</h4>
+    <h4 class="chart-inner-title">Top Job Domains</h4>
     <div class="chart-wrapper">
       <Bar :data="chartData" :options="chartOptions" />
     </div>

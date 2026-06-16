@@ -7,7 +7,7 @@
           <span class="badge-dot"></span>
           Recruitment Insights
         </span>
-        <h2>📊 HR Analytics Dashboard</h2>
+        <h2>HR Analytics Dashboard</h2>
         <p class="subtitle">Real-time candidate pipelines, skills demand analysis, and key performance indicators.</p>
       </div>
     </header>
@@ -50,7 +50,7 @@
           </select>
         </div>
         <button type="button" @click="resetFilters" class="btn-reset">
-          🔄 Reset Filters
+          Reset Filters
         </button>
       </div>
     </div>
@@ -80,7 +80,6 @@
     <!-- Empty State -->
     <div v-else-if="isEmpty" class="empty-wrapper glass-panel">
       <div class="empty-state">
-        <span class="empty-icon">📊</span>
         <h3>No Recruitment Data Available</h3>
         <p>There are no candidates uploaded or matching the selected filters. Please upload resumes in the Bulk CV Ranking page first.</p>
         <router-link to="/hr/rank" class="btn-primary btn-link-rank">Go to Bulk CV Ranking</router-link>
@@ -140,21 +139,18 @@
         <!-- Match Score Stats Cards -->
         <div class="scores-summary-column">
           <div class="score-summary-card glass-panel border-blue">
-            <div class="score-icon">📈</div>
             <div class="score-details">
               <span class="score-val">{{ stats.scores.average }}%</span>
               <span class="score-lbl">Average Match Score</span>
             </div>
           </div>
           <div class="score-summary-card glass-panel border-green">
-            <div class="score-icon">🚀</div>
             <div class="score-details">
               <span class="score-val">{{ stats.scores.highest }}%</span>
               <span class="score-lbl">Highest Match Score</span>
             </div>
           </div>
           <div class="score-summary-card glass-panel border-red">
-            <div class="score-icon">📉</div>
             <div class="score-details">
               <span class="score-val">{{ stats.scores.lowest }}%</span>
               <span class="score-lbl">Lowest Match Score</span>
@@ -164,7 +160,7 @@
 
         <!-- Recruitment Status Distribution Pie Chart -->
         <div class="distribution-chart-card glass-panel">
-          <h4 class="chart-inner-title">📊 Recruitment Status Distribution</h4>
+          <h4 class="chart-inner-title">Recruitment Status Distribution</h4>
           <div class="pie-chart-wrapper">
             <Pie :data="pieChartData" :options="pieChartOptions" />
           </div>
@@ -173,8 +169,8 @@
 
       <!-- Main Analytics Graphs Grid -->
       <section class="charts-grid-layout">
-        <!-- Funnel Chart Box -->
-        <div class="chart-box glass-panel">
+        <!-- Funnel Chart Box (Full Width) -->
+        <div class="chart-box glass-panel full-width-chart">
           <FunnelChart :funnel-data="funnel" />
         </div>
 
@@ -188,8 +184,8 @@
           <CategoryChart :categories-data="categories" />
         </div>
 
-        <!-- Activity Timeline Box -->
-        <div class="chart-box glass-panel timeline-box">
+        <!-- Activity Timeline Box (Full Width) -->
+        <div class="chart-box glass-panel full-width-chart">
           <TimelineChart :timeline-data="timeline" />
         </div>
       </section>
@@ -365,7 +361,7 @@ const pieChartOptions = {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 2.5rem;
 }
 
 .dashboard-header {
@@ -508,13 +504,13 @@ const pieChartOptions = {
 .score-distribution-row {
   display: grid;
   grid-template-columns: 340px 1fr;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .scores-summary-column {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 1.5rem;
 }
 
 .score-summary-card {
@@ -597,16 +593,19 @@ const pieChartOptions = {
 .charts-grid-layout {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .chart-box {
-  padding: 1.75rem;
+  padding: 2.25rem;
   border-radius: 24px;
-  min-height: 320px;
+  min-height: 380px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-soft);
 }
 
-.timeline-box {
+.full-width-chart {
   grid-column: span 2;
 }
 
@@ -615,7 +614,7 @@ const pieChartOptions = {
   .charts-grid-layout {
     grid-template-columns: 1fr;
   }
-  .timeline-box {
+  .full-width-chart {
     grid-column: span 1;
   }
 }

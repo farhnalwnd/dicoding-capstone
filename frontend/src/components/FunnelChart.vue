@@ -1,7 +1,7 @@
 <template>
   <div class="chart-container-inner">
     <div class="chart-header-row">
-      <h4 class="chart-inner-title">🎯 Recruitment Funnel</h4>
+      <h4 class="chart-inner-title">Recruitment Funnel</h4>
       <span class="funnel-metric" v-if="conversionRate > 0">
         Conversion Rate: <strong>{{ conversionRate }}%</strong>
       </span>

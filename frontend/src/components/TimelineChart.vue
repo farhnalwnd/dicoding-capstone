@@ -1,6 +1,6 @@
 <template>
   <div class="chart-container-inner">
-    <h4 class="chart-inner-title">📈 Recruitment Activity Timeline</h4>
+    <h4 class="chart-inner-title">Recruitment Activity Timeline</h4>
     <div class="chart-wrapper">
       <Line :data="chartData" :options="chartOptions" />
     </div>
