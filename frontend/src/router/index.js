@@ -6,6 +6,7 @@ import HRRankView from '../views/HRRankView.vue'
 import SemanticSearchView from '../views/SemanticSearchView.vue'
 import TalentPoolView from '../views/TalentPoolView.vue'
 import InterviewSchedulerView from '../views/InterviewSchedulerView.vue'
+import HRDashboardView from '../views/HRDashboardView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import DashboardView from '../views/DashboardView.vue'
@@ -81,6 +82,15 @@ const routes = [
     component: InterviewSchedulerView, 
     meta: { 
       title: 'Interview Scheduler',
+      requiresAuth: true,
+      roles: ['hr']
+    } 
+  },
+  { 
+    path: '/hr-dashboard', 
+    component: HRDashboardView, 
+    meta: { 
+      title: 'HR Analytics',
       requiresAuth: true,
       roles: ['hr']
     } 

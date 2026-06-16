@@ -19,7 +19,7 @@ from app.services.nlp import (
     extract_jd_target_skills
 )
 from app.core.domain_loader import load_domain_config
-from app.core.mongodb import get_candidates_collection
+from app.core.mongodb import get_candidates_collection, log_activity
 from app.core.metrics import (
     REQUEST_COUNT,
     REQUEST_LATENCY,
@@ -279,6 +279,12 @@ def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_descrip
             
             result = candidates_col.insert_one(candidate_doc)
             candidate["id"] = str(result.inserted_id)
+            log_activity(
+                candidate_id=candidate["id"],
+                candidate_name=candidate["name"],
+                action="added",
+                details=f"Candidate added from Bulk CV Ranking for position: {job_title}"
+            )
 
         time.sleep(0.2)
         progress_manager.complete_job(job_id, candidates)
@@ -376,13 +382,22 @@ async def update_candidate_status(
         raise HTTPException(status_code=400, detail="Invalid candidate ID format")
         
     candidates_col = get_candidates_collection()
+    candidate = candidates_col.find_one({"_id": obj_id})
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+        
     result = candidates_col.update_one(
         {"_id": obj_id},
         {"$set": {"status": status_update.status}}
     )
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Candidate not found")
-        
+    
+    log_activity(
+        candidate_id=id,
+        candidate_name=candidate.get("candidate_name", "Unknown"),
+        action=status_update.status,
+        details=f"Status updated from {candidate.get('status', 'unknown')} to {status_update.status}"
+    )
+    
     return {"status": "success", "message": f"Candidate status updated to {status_update.status}"}
 
 
@@ -437,6 +452,10 @@ async def schedule_candidate_interview(
         raise HTTPException(status_code=400, detail="Invalid candidate ID format")
         
     candidates_col = get_candidates_collection()
+    candidate = candidates_col.find_one({"_id": obj_id, "status": "interview"})
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found or status is not 'interview'")
+        
     result = candidates_col.update_one(
         {"_id": obj_id, "status": "interview"},
         {
@@ -448,9 +467,14 @@ async def schedule_candidate_interview(
             }
         }
     )
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Candidate not found or status is not 'interview'")
-        
+    
+    log_activity(
+        candidate_id=id,
+        candidate_name=candidate.get("candidate_name", "Unknown"),
+        action="interview_scheduled",
+        details=f"Interview scheduled for {req.date} at {req.time}. Meeting link: {req.meeting_link}"
+    )
+    
     return {"status": "success", "message": "Interview scheduled successfully"}
 
 

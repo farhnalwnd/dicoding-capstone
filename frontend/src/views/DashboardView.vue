@@ -141,6 +141,15 @@
               <span class="action-link-text">Open Module →</span>
             </div>
           </router-link>
+
+          <router-link to="/hr-dashboard" class="action-card glass-panel">
+            <span class="action-icon">📊</span>
+            <div class="action-content-card">
+              <h4>HR Analytics Dashboard</h4>
+              <p>Track recruitment metrics, conversion pipelines, and skills demand using AI analytics.</p>
+              <span class="action-link-text">Open Dashboard →</span>
+            </div>
+          </router-link>
         </div>
 
         <!-- Job Seeker Actions -->

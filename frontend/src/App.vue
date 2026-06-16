@@ -89,6 +89,9 @@
               <router-link to="/hr/interviews" active-class="is-active" @click="closeMenus">
                 Interview Scheduler
               </router-link>
+              <router-link to="/hr-dashboard" active-class="is-active" @click="closeMenus">
+                HR Analytics
+              </router-link>
             </div>
           </div>
 
