@@ -70,9 +70,8 @@ jobs:
       - name: Download fine-tuned model
         run: |
           pip install huggingface_hub
-          # User previously indicated they want HuggingFace for model storage
-          # Ensure huggingface-cli is used if repository is private
-          huggingface-cli download farhnalwnd/bi-encoder-cv-matcher --local-dir models/bi-encoder-cv-matcher
+          # Download the model from the user's Hugging Face account
+          huggingface-cli download amirullahh/bi-encoder-cv-matcher --local-dir models/bi-encoder-cv-matcher
       - name: Run model validation
         run: |
           cd backend
