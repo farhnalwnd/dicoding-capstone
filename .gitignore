@@ -10,4 +10,12 @@
 data/training/*.csv
 models/bi-encoder-cv-matcher/**/*
 models/cross-encoder-cv-matcher/**/*
+.venv/
+.venv
+venv/
+venv
 .env
+mlruns/
+reports/
+backend/data/
+data/evaluation/

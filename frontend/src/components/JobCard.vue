@@ -64,7 +64,7 @@ const scoreClass = computed(() => {
 
 .job-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(3, 105, 161, 0.15);
+  box-shadow: var(--shadow-sm);
   border-color: rgba(3, 105, 161, 0.4);
 }
 

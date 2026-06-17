@@ -63,7 +63,7 @@ onMounted(() => {
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
   z-index: 9999;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   border: 1px solid rgba(3, 105, 161, 0.15);
 }
 

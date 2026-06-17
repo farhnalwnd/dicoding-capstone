@@ -35,7 +35,7 @@ score_non_be = round(max(0.0, min(1.0, util.cos_sim(emb_cv_non, emb_jd).item()))
 print(f"Calculated Match Score (Non-matching Bi-Encoder): {score_non_be}%")
 
 print("\n--- Running Hybrid Skills Matching Test (IT Domain) ---")
-matched, missing = match_cv_jd_hybrid(cv_text, jd_text, domain)
+matched, missing, _ = match_cv_jd_hybrid(cv_text, jd_text, domain)
 print(f"Matched Skills: {matched}")
 print(f"Missing Skills: {missing}")
 

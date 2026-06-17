@@ -1,83 +1,199 @@
 <template>
   <div class="glass-panel view-container">
-    <h2>Bulk CV Ranking</h2>
-    <p class="subtitle">Upload multiple CVs to rank candidates against a job description.</p>
+    <!-- Section 2 — API Error Banner -->
+    <FloatingErrorBanner
+      v-if="apiError"
+      v-model="showErrorBanner"
+      :message="apiError.message"
+      :retry-function="rankCVs"
+    />
+
+    <h2>Bulk CV Ranking Dashboard</h2>
+    <p class="subtitle">Upload multiple candidate CVs and compare them against your job requirements using AI matching.</p>
     
-    <div class="form-group">
-      <label>Upload Candidates (PDF/DOCX):</label>
-      <input type="file" multiple @change="handleMultipleFileSelect" class="input-field file-input" />
-      
-      <!-- Select2 style tag-like display for selected files -->
-      <div v-if="selectedFiles.length" class="file-tags-container">
-        <div v-for="(file, index) in selectedFiles" :key="file.name" class="file-tag">
-          <span class="file-name">{{ file.name }}</span>
-          <button type="button" @click="removeFile(index)" class="remove-tag-btn">&times;</button>
+    <!-- Section 1 — Ranking Input Card -->
+    <div class="form-group-container sub-glass-card">
+      <div class="form-group">
+        <label for="cvs-upload">Upload Candidates (PDF/DOCX):</label>
+        <input 
+          id="cvs-upload"
+          type="file" 
+          multiple 
+          @change="handleMultipleFileSelect" 
+          class="input-field file-input" 
+          :disabled="loading"
+        />
+        <span v-if="cvsError" class="inline-error">{{ cvsError }}</span>
+        
+        <!-- Beautiful Tag Display for Selected Files -->
+        <div v-if="selectedFiles.length" class="file-tags-container" aria-label="Selected candidate files">
+          <div v-for="(file, index) in selectedFiles" :key="file.name" class="file-tag">
+            <span class="file-icon">📄</span>
+            <span class="file-name" :title="file.name">{{ file.name }}</span>
+            <button 
+              type="button" 
+              @click="removeFile(index)" 
+              class="remove-tag-btn" 
+              aria-label="Remove file"
+              :disabled="loading"
+            >&times;</button>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <div class="form-group">
-      <label>Job Description:</label>
-      <textarea v-model="jobDescription" placeholder="Paste the job requirements here..." class="input-field textarea" rows="6"></textarea>
-    </div>
-
-    <div class="form-group">
-      <label>Domain:</label>
-      <select v-model="domain" class="input-field">
-        <option v-for="option in domainOptions" :key="option.value" :value="option.value">
-          {{ option.label }}
-        </option>
-      </select>
-      <small class="helper-text">
-        Pilih domain agar sistem memakai skill list yang sesuai saat menghitung ranking kandidat.
-      </small>
-    </div>
-
-    <button @click="rankCVs" :disabled="loading || !selectedFiles.length || !jobDescription" class="btn-primary">
-      {{ loading ? 'Ranking Candidates...' : 'Rank Candidates' }}
-    </button>
-    
-    <div v-if="rankings.length" class="results">
-      <div class="results-header">
-        <h3>Candidate Rankings</h3>
-        <span class="domain-badge">Domain: {{ selectedDomainLabel }}</span>
+      
+      <div class="form-group">
+        <label for="job-desc">Job Description:</label>
+        <textarea 
+          id="job-desc"
+          v-model="jobDescription" 
+          placeholder="Paste the job requirements, qualifications, and role descriptions here..." 
+          class="input-field textarea" 
+          rows="6"
+          :disabled="loading"
+        ></textarea>
+        <span v-if="jobDescError" class="inline-error">{{ jobDescError }}</span>
       </div>
-      <div class="table-container">
-        <table class="ranking-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Candidate Name</th>
-              <th>Semantic</th>
-              <th>Domain Skills</th>
-              <th>Final Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in rankings" :key="r.filename || r.name" :class="[getScoreClass(r.score), 'clickable-row']" @click="openModal(r)">
-              <td class="rank-col">
-                <span class="rank-badge" :class="getScoreClass(r.score)">#{{ r.rank }}</span>
-              </td>
-              <td class="name-col">
-                <div>{{ r.name }}</div>
-                <small v-if="r.filename" class="filename-text">{{ r.filename }}</small>
-              </td>
-              <td class="metric-col">{{ r.semantic_score ?? '-' }}%</td>
-              <td class="metric-col">
-                <span>{{ r.domain_skill_score ?? '-' }}%</span>
-                <small v-if="r.matched_skills_count !== undefined" class="skill-count-text">
-                  {{ r.matched_skills_count }} match / {{ r.missing_skills_count }} miss
-                </small>
-              </td>
-              <td class="score-col">
-                <div class="score-bar-container">
-                  <div class="score-bar" :class="getScoreClass(r.score)" :style="{ width: r.score + '%' }"></div>
-                  <span class="score-text" :class="getScoreClass(r.score)">{{ r.score }}%</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="form-group">
+        <label for="domain-select">Domain Filter:</label>
+        <select id="domain-select" v-model="domain" class="input-field" :disabled="loading">
+          <option v-for="option in domainOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+        <small class="helper-text">
+          Selecting a specific domain optimizes the AI parser to weigh relevant industry skills.
+        </small>
+      </div>
+
+      <button 
+        @click="rankCVs" 
+        :disabled="showLoader || loading" 
+        class="btn-primary rank-btn"
+      >
+        <span>⚡</span>
+        {{ loading ? 'Ranking Candidates...' : 'Rank Candidates' }}
+      </button>
+    </div>
+
+    <!-- AI Processing Dashboard Loader -->
+    <AIProcessingLoader
+      v-if="showLoader"
+      :progress="progress"
+      :message="message"
+      :elapsed-time="elapsedTime"
+      :status="status"
+      :error-message="errorMessage"
+      :steps="steps"
+      @close="handleLoaderClose"
+    />
+
+    <!-- Fatal Error State -->
+    <ErrorState
+      v-else-if="fatalError"
+      :type="fatalError.type"
+      :message="fatalError.message"
+      :retry-function="rankCVs"
+    />
+
+    <!-- Empty State -->
+    <div v-else-if="!rankings.length" class="empty-state-panel glass-panel">
+      <div class="empty-icon">📊</div>
+      <p class="empty-text">No candidate ranking performed yet.</p>
+      <p class="empty-subtext">Upload candidate CVs and rank them using AI to populate the recruitment leaderboard.</p>
+    </div>
+
+    <!-- Results Dashboard -->
+    <div v-else class="results-dashboard">
+      <!-- Section 2 — Ranking Summary -->
+      <div class="summary-cards-row">
+        <div class="mini-stat-card sub-glass-card">
+          <div class="stat-icon-wrapper primary-bg">👥</div>
+          <div class="stat-content">
+            <span class="stat-label">Total Candidates</span>
+            <span class="stat-number text-primary">{{ totalCandidates }}</span>
+          </div>
+        </div>
+
+        <div class="mini-stat-card sub-glass-card">
+          <div class="stat-icon-wrapper success-bg">🏆</div>
+          <div class="stat-content">
+            <span class="stat-label">Top Match Score</span>
+            <span class="stat-number text-success">{{ topScore.toFixed(1) }}%</span>
+          </div>
+        </div>
+
+        <div class="mini-stat-card sub-glass-card">
+          <div class="stat-icon-wrapper info-bg">📈</div>
+          <div class="stat-content">
+            <span class="stat-label">Average Score</span>
+            <span class="stat-number text-info">{{ averageScore }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Dashboard Grid Layout -->
+      <div class="dashboard-grid">
+        <!-- Left Column: Best Match, Leaderboard, & Distribution Chart -->
+        <div class="left-column">
+          <!-- Section 5 — Best Candidate Highlight -->
+          <div class="section-container" v-if="bestCandidate">
+            <h3 class="section-title">🏆 Top Candidate</h3>
+            <BestCandidateCard
+              :name="bestCandidate.name"
+              :score="bestCandidate.score"
+              :semantic-score="bestCandidate.semantic_score"
+              :skill-score="bestCandidate.domain_skill_score"
+              :matched-count="bestCandidate.matched_skills_count"
+              :missing-count="bestCandidate.missing_skills_count"
+              :matched-skills="bestCandidate.matched_skills"
+              :missing-skills="bestCandidate.missing_skills"
+              :filename="bestCandidate.filename"
+              :status="bestCandidate.status"
+              style="cursor: pointer;"
+              @click="openModal(bestCandidate)"
+              @move-to-talent-pool="handleMoveToTalentPool(bestCandidate)"
+              @move-to-interview="handleMoveToInterview(bestCandidate)"
+            />
+          </div>
+
+          <!-- Section 3 — Leaderboard -->
+          <div class="section-container">
+            <LeaderboardCard :candidates="rankings" @select-candidate="openModal" />
+          </div>
+
+          <!-- Section 6 — Score Distribution Chart -->
+          <div class="section-container sub-glass-card chart-card">
+            <h3 class="chart-title">Candidate Score Distribution</h3>
+            <div class="chart-wrapper">
+              <canvas ref="chartCanvas" id="score-distribution-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Candidate Ranking Cards List -->
+        <div class="right-column">
+          <h3 class="section-title">All Candidate Matches</h3>
+          <div class="ranking-cards-list">
+            <RankingCard
+              v-for="r in rankings"
+              :key="r.filename || r.name"
+              :name="r.name"
+              :score="r.score"
+              :rank="r.rank"
+              :semantic-score="r.semantic_score"
+              :skill-score="r.domain_skill_score"
+              :matched-count="r.matched_skills_count"
+              :missing-count="r.missing_skills_count"
+              :filename="r.filename"
+              :status="r.status"
+              style="cursor: pointer;"
+              @click="openModal(r)"
+              @move-to-talent-pool="handleMoveToTalentPool(r)"
+              @move-to-interview="handleMoveToInterview(r)"
+            />
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -88,10 +204,17 @@
         <h3 class="modal-title">{{ selectedCandidate.name }}'s Details</h3>
         
         <div class="modal-body">
-          <div class="chart-container" v-if="chartData">
+          <div class="chart-container">
             <h4>Domain Skills Analysis</h4>
-            <div class="radar-wrapper">
+            <div v-if="chartData" class="radar-wrapper">
               <Radar :data="chartData" :options="chartOptions" />
+            </div>
+            <div v-else class="empty-chart-fallback">
+              <div class="fallback-icon">📊</div>
+              <p class="fallback-title">No Skills to Analyze</p>
+              <p class="fallback-text">
+                Please provide a detailed job description containing specific skills to visualize the candidate's skill proficiency.
+              </p>
             </div>
           </div>
 
@@ -113,34 +236,60 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onUnmounted, nextTick, inject } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../config/api'
+import { Chart, registerables } from 'chart.js'
 import { Radar } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend
-} from 'chart.js'
+import BestCandidateCard from '../components/BestCandidateCard.vue'
+import LeaderboardCard from '../components/LeaderboardCard.vue'
+import RankingCard from '../components/RankingCard.vue'
+import AIProcessingLoader from '../components/AIProcessingLoader.vue'
+import ErrorState from '../components/ErrorState.vue'
+import FloatingErrorBanner from '../components/FloatingErrorBanner.vue'
+import { validateFile } from '../utils/validation'
 
-ChartJS.register(
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend
-)
+// Register Chart.js components
+Chart.register(...registerables)
+
+const toast = inject('toast')
+
 
 const selectedFiles = ref([])
 const jobDescription = ref('')
 const domain = ref('general')
 const loading = ref(false)
+
+// SSE Loading State
+const showLoader = ref(false)
+const progress = ref(0)
+const elapsedTime = ref(0)
+const message = ref('')
+const status = ref('processing')
+const errorMessage = ref('')
 const rankings = ref([])
+
+// Validation states
+const cvsError = ref('')
+const jobDescError = ref('')
+
+// Error Handlers
+const apiError = ref(null)
+const fatalError = ref(null)
+const showErrorBanner = ref(false)
+
+const chartCanvas = ref(null)
+let chartInstance = null
+let timerInterval = null
+let eventSource = null
+
+// Define 4 steps for HR Candidate Ranking
+const steps = [
+  'Parsing CVs',
+  'Extracting Skills',
+  'Embedding Generation',
+  'Ranking Candidates'
+]
 
 const domainOptions = [
   { value: 'general', label: 'General' },
@@ -156,51 +305,310 @@ const domainOptions = [
   { value: 'operational', label: 'Operational' }
 ]
 
-const selectedDomainLabel = computed(() => {
-  return domainOptions.find(option => option.value === domain.value)?.label || 'General'
+watch(jobDescription, () => {
+  if (jobDescription.value.trim()) {
+    jobDescError.value = ''
+  }
+})
+
+// Calculated Summary Stats
+const totalCandidates = computed(() => rankings.value.length)
+const topScore = computed(() => rankings.value.length ? Math.max(...rankings.value.map(r => r.score)) : 0)
+const averageScore = computed(() => {
+  if (!rankings.value.length) return 0
+  const total = rankings.value.reduce((sum, r) => sum + r.score, 0)
+  return Math.round(total / rankings.value.length)
+})
+
+// Best Candidate (#1 Rank)
+const bestCandidate = computed(() => {
+  return rankings.value.find(r => r.rank === 1) || rankings.value[0] || null
 })
 
 const handleMultipleFileSelect = (e) => {
   const files = Array.from(e.target.files)
-  // Merge unique files
+  cvsError.value = ''
   for (let f of files) {
+    const fileValidation = validateFile(f)
+    if (!fileValidation.valid) {
+      cvsError.value = fileValidation.error
+      continue
+    }
     if (!selectedFiles.value.some(existing => existing.name === f.name)) {
       selectedFiles.value.push(f)
     }
   }
+  e.target.value = ''
 }
 
 const removeFile = (index) => {
   selectedFiles.value.splice(index, 1)
 }
 
-const getScoreClass = (score) => {
-  if (score >= 55) return 'score-high'
-  if (score >= 30) return 'score-medium'
-  return 'score-low'
+const handleLoaderClose = () => {
+  showLoader.value = false
+  loading.value = false
+  if (eventSource) eventSource.close()
+  clearInterval(timerInterval)
 }
 
 const rankCVs = async () => {
-  if (!selectedFiles.value.length || !jobDescription.value) {
-    alert("Please upload at least one CV and provide Job Description")
+
+  cvsError.value = ''
+  jobDescError.value = ''
+  
+  if (!selectedFiles.value.length) {
+    cvsError.value = "Please upload at least one CV."
     return
   }
+  if (!jobDescription.value.trim()) {
+    jobDescError.value = "Please enter a Job Description."
+    return
+  }
+  
   loading.value = true
+  showLoader.value = true
+  progress.value = 0
+  elapsedTime.value = 0
+  message.value = 'Uploading files and initializing job...'
+  status.value = 'processing'
+  errorMessage.value = ''
+  rankings.value = []
+  apiError.value = null
+  fatalError.value = null
+  showErrorBanner.value = false
+  
   const fd = new FormData()
   for (let f of selectedFiles.value) {
     fd.append('cvs', f)
   }
   fd.append('job_description', jobDescription.value)
   fd.append('domain', domain.value)
+  
   try {
-    const res = await axios.post(`${API_BASE_URL}/api/hr/rank`, fd)
-    rankings.value = res.data
+    const startRes = await axios.post(`${API_BASE_URL}/api/hr/rank/start`, fd)
+    const jobId = startRes.data.job_id
+    
+    // Start elapsed timer
+    const startTime = Date.now()
+    timerInterval = setInterval(() => {
+      elapsedTime.value = (Date.now() - startTime) / 1000
+    }, 100)
+    
+    const token = localStorage.getItem('token') || ''
+    eventSource = new EventSource(`${API_BASE_URL}/api/progress/${jobId}?token=${encodeURIComponent(token)}`)
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        progress.value = data.progress
+        message.value = data.message
+        status.value = data.status
+        
+        if (data.status === 'completed') {
+          clearInterval(timerInterval)
+          eventSource.close()
+          
+          setTimeout(async () => {
+            try {
+              const resultRes = await axios.get(`${API_BASE_URL}/api/result/${jobId}`)
+              rankings.value = (resultRes.data || []).map(r => ({
+                ...r,
+                status: r.status || 'screening'
+              }))
+              
+              if (!rankings.value.length) {
+                apiError.value = { message: 'No candidates were ranked.' }
+                showErrorBanner.value = true
+                toast.warning('No candidates were ranked.')
+              } else {
+                toast.success("Candidates ranked successfully.")
+              }
+              
+              showLoader.value = false
+              loading.value = false
+            } catch (err) {
+              console.error(err)
+              status.value = 'error'
+              errorMessage.value = err.message || 'Failed to fetch final candidate ranks.'
+              apiError.value = err
+              showErrorBanner.value = true
+              toast.error(errorMessage.value)
+            }
+          }, 1000)
+        } else if (data.status === 'error') {
+          clearInterval(timerInterval)
+          eventSource.close()
+          status.value = 'error'
+          errorMessage.value = data.message || 'Candidate ranking failed.'
+          
+          apiError.value = {
+            message: data.message || 'Candidate ranking failed.'
+          }
+          showErrorBanner.value = true
+          toast.error(apiError.value.message)
+        }
+      } catch (e) {
+        console.error("Failed to parse SSE payload", e)
+      }
+    }
+    
+    eventSource.onerror = () => {
+      clearInterval(timerInterval)
+      eventSource.close()
+      status.value = 'error'
+      
+      const isOffline = !navigator.onLine
+      let errMsg = 'Connection lost while receiving progress updates.'
+      let errType = 'network'
+      
+      if (!isOffline) {
+        errMsg = 'AI processing service is currently unavailable.'
+        errType = 'backend'
+      }
+      
+      errorMessage.value = errMsg
+      fatalError.value = {
+        type: errType,
+        message: errMsg
+      }
+      toast.error(errMsg)
+    }
+    
   } catch (error) {
     console.error(error)
-    alert("Failed to rank candidates")
+    loading.value = false
+    showLoader.value = false
+    
+    let errType = error.type || 'backend'
+    let errMsg = error.message || 'Failed to initialize bulk CV ranking task.'
+    
+    if (error.response && error.response.status === 404) {
+      errMsg = 'Processing session expired. Please start a new analysis.'
+      errType = 'empty'
+    }
+    
+    if (errType === 'network') {
+      fatalError.value = {
+        type: errType,
+        message: errMsg
+      }
+    } else {
+      apiError.value = {
+        message: errMsg
+      }
+      showErrorBanner.value = true
+    }
+    toast.error(errMsg)
   }
-  loading.value = false
 }
+// Chart.js Score Distribution instantiation
+
+const updateChart = () => {
+  if (!chartCanvas.value) return
+  if (chartInstance) {
+    chartInstance.destroy()
+  }
+  const ctx = chartCanvas.value.getContext('2d')
+  
+  // Sort rankings to display highest score first
+  const sortedRankings = [...rankings.value].sort((a, b) => b.score - a.score)
+  const labels = sortedRankings.map(r => r.name)
+  const data = sortedRankings.map(r => r.score)
+  
+  // Custom score color mapping
+  const backgroundColors = sortedRankings.map(r => {
+    if (r.score >= 90) return 'rgba(34, 197, 94, 0.75)'
+    if (r.score >= 75) return 'rgba(14, 165, 233, 0.75)'
+    if (r.score >= 60) return 'rgba(245, 158, 11, 0.75)'
+    return 'rgba(239, 68, 68, 0.75)'
+  })
+  const borderColors = sortedRankings.map(r => {
+    if (r.score >= 90) return '#22C55E'
+    if (r.score >= 75) return '#0EA5E9'
+    if (r.score >= 60) return '#F59E0B'
+    return '#EF4444'
+  })
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Match Score (%)',
+        data: data,
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
+        borderWidth: 1.5,
+        borderRadius: 8,
+        barPercentage: 0.6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          titleFont: { family: 'Inter', weight: '700' },
+          bodyFont: { family: 'Inter' },
+          callbacks: {
+            label: (context) => `Match Score: ${context.parsed.x.toFixed(1)}%`
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 0,
+          max: 100,
+          grid: {
+            color: 'rgba(148, 163, 184, 0.08)'
+          },
+          ticks: {
+            color: '#64748B',
+            font: {
+              family: 'Inter',
+              weight: '700',
+              size: 11
+            }
+          }
+        },
+        y: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: '#1E3A5F',
+            font: {
+              family: 'Inter',
+              weight: '800',
+              size: 11
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+// Watch rankings list and draw chart
+watch(rankings, (newRankings) => {
+  if (newRankings && newRankings.length) {
+    nextTick(() => {
+      updateChart()
+    })
+  }
+}, { deep: true })
+
+onUnmounted(() => {
+  if (chartInstance) {
+    chartInstance.destroy()
+  }
+})
 
 // Modal State
 const selectedCandidate = ref(null)
@@ -291,40 +699,100 @@ const generateQuestions = async () => {
     }
     const res = await axios.post(`${API_BASE_URL}/api/hr/generate-questions`, reqData)
     generatedQuestions.value = res.data.questions
+    toast.success("Interview questions generated successfully")
   } catch (error) {
     console.error(error)
-    alert("Failed to generate questions")
+    toast.error("Failed to generate questions")
   }
   loadingQuestions.value = false
 }
 
+const handleMoveToTalentPool = async (candidate) => {
+  if (!candidate.id) {
+    toast.error("Candidate ID not found. Cannot update status.")
+    return
+  }
+  try {
+    await axios.patch(`${API_BASE_URL}/api/candidates/${candidate.id}/status`, {
+      status: 'talent_pool'
+    })
+    candidate.status = 'talent_pool'
+    toast.success(`${candidate.name} moved to Talent Pool successfully.`)
+  } catch (err) {
+    console.error(err)
+    toast.error(err.response?.data?.detail || "Failed to move candidate to Talent Pool.")
+  }
+}
+
+const handleMoveToInterview = async (candidate) => {
+  if (!candidate.id) {
+    toast.error("Candidate ID not found. Cannot update status.")
+    return
+  }
+  try {
+    await axios.patch(`${API_BASE_URL}/api/candidates/${candidate.id}/status`, {
+      status: 'interview'
+    })
+    candidate.status = 'interview'
+    toast.success(`${candidate.name} moved to Interview successfully.`)
+  } catch (err) {
+    console.error(err)
+    toast.error(err.response?.data?.detail || "Failed to move candidate to Interview.")
+  }
+}
 </script>
 
+
 <style scoped>
+.inline-error {
+  color: #EF4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.35rem;
+  display: block;
+  text-align: left;
+}
+
+.form-group-container {
+  padding: 2.2rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 2rem;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.sub-glass-card {
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.02);
+}
+
 .file-tags-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(3, 105, 161, 0.2);
-  border-radius: 8px;
-  min-height: 42px;
+  gap: 0.6rem;
+  margin-top: 0.95rem;
+  padding: 0.8rem;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(14, 165, 233, 0.12);
+  border-radius: 16px;
+  min-height: 48px;
 }
 
 .file-tag {
   display: inline-flex;
   align-items: center;
-  background: var(--primary);
-  color: white;
-  padding: 0.25rem 0.75rem;
+  gap: 0.45rem;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  color: var(--primary-dark);
+  padding: 0.35rem 0.85rem;
   border-radius: 20px;
   font-size: 0.85rem;
+  font-weight: 700;
+  max-width: 250px;
+  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.03);
 }
 
 .file-name {
-  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -333,178 +801,129 @@ const generateQuestions = async () => {
 .remove-tag-btn {
   background: none;
   border: none;
-  color: white;
-  font-size: 1.1rem;
-  margin-left: 0.5rem;
+  color: var(--text-muted);
+  font-size: 1.25rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   height: 100%;
+  transition: color 0.18s ease;
 }
 
 .remove-tag-btn:hover {
-  color: #EF4444;
+  color: var(--danger);
 }
 
-/* Beautiful Ranking Table Styles */
-.table-container {
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  border: 1px solid rgba(3, 105, 161, 0.2);
-  overflow: hidden;
-  margin-top: 1.5rem;
+.rank-btn {
+  font-size: 1rem;
+  min-width: 200px;
 }
 
-.ranking-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.ranking-table th {
-  background: rgba(3, 105, 161, 0.1);
-  color: #0369A1;
-  padding: 1rem;
-  font-weight: 700;
-  font-size: 0.95rem;
-  border-bottom: 2px solid rgba(3, 105, 161, 0.15);
-}
-
-.ranking-table td {
-  padding: 1.2rem 1rem;
-  border-bottom: 1px solid rgba(3, 105, 161, 0.1);
-  transition: all 0.2s ease;
-  vertical-align: middle;
-}
-
-.ranking-table tbody tr {
-  transition: all 0.3s ease;
-}
-
-.ranking-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.8);
-  transform: scale(1.01);
-  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.08);
-}
-
-.rank-col {
-  width: 80px;
-}
-
-.rank-badge {
-  display: inline-flex;
+/* Empty State Styling */
+.empty-state-panel {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  padding: 4.5rem 2rem;
+  margin-top: 2rem;
+  text-align: center;
+  gap: 1rem;
+}
+
+.empty-icon {
+  font-size: 3.5rem;
+  filter: drop-shadow(0 10px 20px rgba(3, 105, 161, 0.15));
+}
+
+.empty-text {
+  font-size: 1.25rem;
+  font-weight: 850;
+  color: var(--text-soft);
+  margin: 0;
+}
+
+.empty-subtext {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  max-width: 450px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Summary Cards Area */
+.summary-cards-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2.2rem;
+}
+
+.mini-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.2rem 1.6rem;
+  border-radius: var(--radius-lg);
+}
+
+.stat-icon-wrapper {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.rank-badge.score-high {
-  background-color: rgba(34, 197, 94, 0.15);
-  color: #16A34A;
-  border: 1.5px solid #22C55E;
-}
-
-.rank-badge.score-medium {
-  background-color: rgba(234, 179, 8, 0.15);
-  color: #CA8A04;
-  border: 1.5px solid #EAB308;
-}
-
-.rank-badge.score-low {
-  background-color: rgba(239, 68, 68, 0.15);
-  color: #DC2626;
-  border: 1.5px solid #EF4444;
-}
-
-.name-col {
-  font-weight: 600;
-  color: #0C4A6E;
-  font-size: 1rem;
-}
-
-.score-col {
-  min-width: 250px;
-}
-
-.score-bar-container {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  background: rgba(3, 105, 161, 0.05);
-  border-radius: 9999px;
-  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
-  border: 1px solid rgba(3, 105, 161, 0.1);
+  justify-content: center;
+  font-size: 1.35rem;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
 }
 
-.score-bar {
-  height: 12px;
-  border-radius: 9999px;
-  transition: width 1s ease-in-out;
+.primary-bg {
+  background-color: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.22);
 }
 
-.score-bar.score-high {
-  background: linear-gradient(90deg, #4ADE80 0%, #22C55E 100%);
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+.success-bg {
+  background-color: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.22);
 }
 
-.score-bar.score-medium {
-  background: linear-gradient(90deg, #FDE047 0%, #EAB308 100%);
-  box-shadow: 0 0 8px rgba(234, 179, 8, 0.4);
+.info-bg {
+  background-color: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.22);
 }
 
-.score-bar.score-low {
-  background: linear-gradient(90deg, #F87171 0%, #EF4444 100%);
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+.text-primary {
+  color: var(--primary-dark);
 }
 
-.score-text {
-  font-weight: 700;
-  font-size: 0.9rem;
-  min-width: 45px;
-}
-
-.score-text.score-high {
+.text-success {
   color: #16A34A;
 }
 
-.score-text.score-medium {
-  color: #CA8A04;
+.text-info {
+  color: var(--indigo);
 }
 
-.score-text.score-low {
-  color: #DC2626;
-}
-
-.helper-text {
-  display: block;
-  margin-top: 0.35rem;
-  color: #64748B;
-  font-size: 0.85rem;
-}
-
-.results-header {
+.stat-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
 }
 
-.domain-badge {
-  background: rgba(3, 105, 161, 0.1);
-  color: #0369A1;
-  border: 1px solid rgba(3, 105, 161, 0.2);
-  border-radius: 9999px;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
-  font-weight: 700;
+.stat-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-number {
+  font-size: 1.55rem;
+  font-weight: 900;
+  line-height: 1.2;
 }
 
 .filename-text,
@@ -516,19 +935,74 @@ const generateQuestions = async () => {
   font-weight: 500;
 }
 
-.metric-col {
-  color: #0C4A6E;
-  font-weight: 700;
-  min-width: 120px;
+
+/* Dashboard Grid Properties */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.left-column,
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.section-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 850;
+  color: var(--text-soft);
+}
+
+.chart-card {
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.chart-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 850;
+  color: var(--text-soft);
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 280px;
+}
+
+.ranking-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+/* Responsive design properties */
+@media (max-width: 992px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }
 
 @media (max-width: 768px) {
-  .table-container {
-    overflow-x: auto;
-  }
-
-  .ranking-table {
-    min-width: 760px;
+  .summary-cards-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }
 
@@ -649,5 +1123,36 @@ const generateQuestions = async () => {
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+.empty-chart-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 300px;
+  padding: 1.5rem;
+}
+
+.fallback-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 8px 16px rgba(14, 165, 233, 0.15));
+}
+
+.fallback-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-soft);
+  margin: 0 0 0.5rem;
+}
+
+.fallback-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 280px;
 }
 </style>

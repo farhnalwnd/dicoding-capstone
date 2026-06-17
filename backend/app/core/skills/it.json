@@ -12,7 +12,7 @@
     "Scikit-Learn", "Pandas", "NumPy", "Apache Spark", "Hadoop",
     "Kafka", "RabbitMQ", "Redis", "Elasticsearch", "CI/CD",
     "Jenkins", "Terraform", "Ansible", "Agile", "Scrum",
-    "Next.js", "Express.js"
+    "Next.js", "Express.js", "Pytest"
   ],
   "roles": [
     "Backend Engineer", "Frontend Developer", "DevOps Engineer",

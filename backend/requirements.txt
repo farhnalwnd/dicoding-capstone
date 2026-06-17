@@ -24,3 +24,20 @@ pandas==2.3.3
 pymongo==4.10.1
 requests==2.32.3
 beautifulsoup4==4.14.3
+
+# Monitoring
+prometheus-client==0.21.1
+
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+google-auth==2.38.0
+email-validator>=2.0.0
+bcrypt==3.2.2
+
+# Testing
+pytest==8.4.1
+pytest-cov==6.2.1
+pytest-asyncio==1.1.0
+httpx==0.28.1

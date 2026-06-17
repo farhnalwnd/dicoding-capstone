@@ -1,0 +1,19 @@
+dataset:
+  num_triplets: 10000
+
+training:
+  epochs: 10
+  batch_size: 16
+
+model:
+  output_path: models/bi-encoder-cv-matcher
+
+evaluation:
+  dataset_version: v4
+  top_k: 5
+
+paths:
+  skills_dir: backend/app/core/skills
+  templates_dir: training/templates
+  raw_data_dir: data/raw
+  processed_data_dir: data/processed

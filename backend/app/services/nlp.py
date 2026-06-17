@@ -6,6 +6,10 @@ from sklearn.cluster import KMeans
 from typing import List, Dict, Any, Tuple
 import numpy as np
 
+from app.services.explainability import (
+    build_match_explanation
+)
+
 MODEL_MAIN = os.getenv("MODEL_MAIN", "paraphrase-multilingual-MiniLM-L12-v2")
 MODEL_BI_ENCODER = os.getenv("MODEL_BI_ENCODER")
 
@@ -29,6 +33,55 @@ def get_similarity_score(text1: str, text2: str) -> float:
     emb2 = model.encode(text2, convert_to_tensor=True)
     similarity = util.cos_sim(emb1, emb2).item()
     return round(max(0.0, min(1.0, similarity)) * 100, 2)
+    
+def analyze_cv_jd(
+    cv_text: str,
+    jd_text: str,
+    domain: str
+):
+    """
+    Complete explainable CV-JD analysis
+    """
+    from app.core.domain_loader import load_domain_config
+
+    similarity_score = get_similarity_score(
+        cv_text,
+        jd_text
+    )
+
+    matched_skills, missing_skills, skill_scores = (
+        match_cv_jd_hybrid(
+            cv_text=cv_text,
+            jd_text=jd_text,
+            domain=domain
+        )
+    )
+
+    # Domain relevance: how many of ALL domain skills appear in the CV
+    # This rewards CVs that genuinely belong to the same domain as the JD.
+    # An IT CV should score higher against an IT JD than a Finance JD.
+    config = load_domain_config(domain)
+    all_domain_skills = config.get("skills", [])
+    if all_domain_skills:
+        cv_domain_hits = sum(
+            1 for s in all_domain_skills
+            if has_skill_exact(s, cv_text)
+        )
+        domain_relevance = round(
+            (cv_domain_hits / len(all_domain_skills)) * 100, 2
+        )
+    else:
+        domain_relevance = 0.0
+
+    explanation = build_match_explanation(
+        similarity_score=similarity_score,
+        matched_skills=matched_skills,
+        missing_skills=missing_skills,
+        domain_relevance=domain_relevance
+    )
+    explanation["skill_scores"] = skill_scores
+    return explanation
+
 
 def extract_phrases(text: str) -> List[str]:
     from app.services.parser import STOPWORDS
@@ -146,6 +199,120 @@ def has_skill_exact(skill: str, text: str) -> bool:
     return bool(re.search(pattern, text_lower))
 
 
+def clean_skill_phrase(skill: str) -> str:
+    # Remove bullet symbols and formatting characters from start and end
+    s = re.sub(r'^[-\*•\s]+', '', skill)
+    s = re.sub(r'[-\*•\s]+$', '', s)
+    return s.strip()
+
+def is_valid_skill(phrase: str, domain_skills: set[str]) -> bool:
+    # 6. Bersihkan bullet prefix sebelum validasi
+    clean_phrase = re.sub(r'^[-\*•\s]+', '', phrase)
+    clean_phrase = re.sub(r'[-\*•\s]+$', '', clean_phrase).strip()
+    
+    if len(clean_phrase) < 2:
+        return False
+        
+    phrase_lower = clean_phrase.lower()
+    
+    # 2. Skill yang ada di whitelist domain harus selalu dianggap valid.
+    domain_skills_lower = {s.lower() for s in domain_skills} if domain_skills else set()
+    if phrase_lower in domain_skills_lower:
+        return True
+        
+    # 3. Blacklist untuk generic words
+    GENERIC_WORDS = {
+        "key", "interface", "integration", "integrations", "principle", "principles",
+        "testable", "building", "designing", "documented", "maintaining", "robust"
+    }
+    
+    # 4. Blacklist role/job title
+    ROLE_WORDS = {
+        "engineer", "engineers", "developer", "developers", "architect", "architects",
+        "manager", "managers", "consultant", "consultants", "analyst", "analysts",
+        "officer", "officers"
+    }
+    
+    # 5. Blacklist action verbs
+    ACTION_WORDS = {
+        "collaborate", "collaborating", "implement", "implementing", "build", "building",
+        "maintain", "maintaining", "design", "designing", "develop", "developing",
+        "support", "supporting", "integrate", "integrating"
+    }
+    
+    # Standard stopwords
+    from app.services.parser import STOPWORDS
+    
+    words = phrase_lower.split()
+    if not words:
+        return False
+        
+    # Check if the whole phrase matches any blacklist
+    if phrase_lower in GENERIC_WORDS or phrase_lower in ROLE_WORDS or phrase_lower in ACTION_WORDS:
+        return False
+        
+    # Check if any word is in ROLE_WORDS or GENERIC_WORDS
+    if any(w in ROLE_WORDS for w in words):
+        return False
+        
+    if any(w in GENERIC_WORDS for w in words):
+        return False
+        
+    # Check if first word is in ACTION_WORDS
+    if words[0] in ACTION_WORDS:
+        return False
+        
+    # If all words in the phrase are stopwords or generic/action/role words
+    if all(w in STOPWORDS or w in GENERIC_WORDS or w in ROLE_WORDS or w in ACTION_WORDS for w in words):
+        return False
+        
+    return True
+
+def _get_tokens(s: str) -> List[str]:
+    return re.findall(r'[a-zA-Z0-9]+', s.lower())
+
+def _is_sublist(sub: List[str], lst: List[str]) -> bool:
+    n, m = len(sub), len(lst)
+    for i in range(m - n + 1):
+        if lst[i:i+n] == sub:
+            return True
+    return False
+
+def deduplicate_skills(skills: List[str], domain_skills: List[str] = None) -> List[str]:
+    if not skills:
+        return []
+        
+    ds_lower = {s.lower() for s in domain_skills} if domain_skills else set()
+    
+    to_remove = set()
+    n = len(skills)
+    
+    for i in range(n):
+        for j in range(n):
+            if i == j or j in to_remove or i in to_remove:
+                continue
+            s1 = skills[i]
+            s2 = skills[j]
+            
+            t1 = _get_tokens(s1)
+            t2 = _get_tokens(s2)
+            
+            if not t1 or not t2:
+                continue
+                
+            if len(t1) < len(t2) and _is_sublist(t1, t2):
+                s1_lower = s1.lower()
+                s2_lower = s2.lower()
+                
+                if s1_lower in ds_lower and s2_lower not in ds_lower:
+                    to_remove.add(j)
+                elif s2_lower in ds_lower and s1_lower not in ds_lower:
+                    to_remove.add(i)
+                else:
+                    to_remove.add(i)
+                    
+    return [skills[i] for i in range(n) if i not in to_remove]
+
 def extract_jd_target_skills(jd_text: str, domain: str) -> List[str]:
     """
     Extract exact valid skills from JD text using the Master Skills list.
@@ -169,6 +336,30 @@ def extract_jd_target_skills(jd_text: str, domain: str) -> List[str]:
         if has_skill_exact(skill, jd_text):
             target_skills.add(skill)
             
+    # HEAD normalization safety fallback
+    NORMALIZATION_MAP = {
+        "rest": "REST API",
+        "rest api": "REST API",
+        "restful api": "REST API",
+        "restful apis": "REST API",
+        "ci": "CI/CD",
+        "ci/cd": "CI/CD",
+        "nlp models": "NLP",
+        "nlp": "NLP",
+        "vue": "Vue.js",
+        "vue.js": "Vue.js",
+        "react": "React",
+        "react.js": "React",
+        "reactjs": "React",
+        "node": "Node.js",
+        "node.js": "Node.js",
+        "nodejs": "Node.js"
+    }
+    for var_name, norm_name in NORMALIZATION_MAP.items():
+        if has_skill_exact(var_name, jd_text):
+            if norm_name in master_skills or norm_name in domain_skills:
+                target_skills.add(norm_name)
+            
     return list(target_skills)
 
 def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_target_skills: List[str] = None) -> Tuple[List[str], List[str], Dict[str, float]]:
@@ -180,6 +371,7 @@ def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_targ
     
     config = load_domain_config(domain)
     domain_skills = config.get("skills", [])
+    domain_skill_set = set(domain_skills)
     threshold_direct = config.get("threshold_direct_match", 0.75)
     threshold_master = config.get("threshold_master_match", 0.82)
     
@@ -233,15 +425,24 @@ def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_targ
             missing_skills_with_scores[skill] = 0.0
             
     # Sort matched_skills by score descending, exact matches (100.0) first
-    matched_skills = sorted(matched_with_scores.keys(), key=lambda k: matched_with_scores[k], reverse=True)[:15]
+    matched_skills = sorted(matched_with_scores.keys(), key=lambda k: matched_with_scores[k], reverse=True)
     
     # Sort missing_skills by score descending (closest missing skills shown first)
-    missing_skills = sorted(missing_skills_with_scores.keys(), key=lambda k: missing_skills_with_scores[k], reverse=True)[:15]
+    missing_skills = sorted(missing_skills_with_scores.keys(), key=lambda k: missing_skills_with_scores[k], reverse=True)
+    
+    # Apply deduplication
+    matched_skills = deduplicate_skills(matched_skills, domain_skills)
+    missing_skills = deduplicate_skills(missing_skills, domain_skills)
+    
+    # Limit output length
+    matched_skills = matched_skills[:15]
+    missing_skills = missing_skills[:15]
     
     # Combine scores for radar chart or analysis
     skill_scores = {**matched_with_scores, **missing_skills_with_scores}
     
     return matched_skills, missing_skills, skill_scores
+
 
 def cluster_documents(texts: List[str], filenames: List[str], num_clusters: int = 3) -> List[Dict[str, Any]]:
     if not texts:
