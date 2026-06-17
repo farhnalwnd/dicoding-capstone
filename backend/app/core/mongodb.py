@@ -1,7 +1,9 @@
 import os
 from pymongo import MongoClient
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:password@localhost:27017/")
+MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    raise RuntimeError("MONGO_URI environment variable is required. Set it before starting the server.")
 client = MongoClient(MONGO_URI)
 db = client.cv_matcher
 
@@ -39,6 +41,7 @@ def log_activity(candidate_id: str, candidate_name: str, action: str, details: s
             "details": details or ""
         })
     except Exception as e:
-        print(f"Failed to log activity: {e}")
+        import logging
+        logging.getLogger(__name__).warning("Failed to log activity: %s", type(e).__name__)
 
 

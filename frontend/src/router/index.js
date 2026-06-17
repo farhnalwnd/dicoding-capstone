@@ -52,12 +52,12 @@ const routes = [
     } 
   },
   { 
-    path: '/jobseeker/search', 
+    path: '/hr/search', 
     component: SemanticSearchView, 
     meta: { 
-      title: 'Semantic Job Search',
+      title: 'Semantic Talent Search',
       requiresAuth: true,
-      roles: ['jobseeker']
+      roles: ['hr']
     } 
   },
   {

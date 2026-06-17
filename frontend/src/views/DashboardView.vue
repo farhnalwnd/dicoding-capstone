@@ -7,7 +7,7 @@
           <span class="badge-dot"></span>
           {{ isHrRole ? 'HR Recruiter Account' : 'Job Seeker Account' }}
         </span>
-        <h2>Welcome back, {{ userName }}!</h2>
+        <h2 style="font-size: 1.25rem; font-weight: 700;">Welcome back, {{ userName }}!</h2>
         <p class="subtitle-dashboard">Here is your recruitment overview and quick actions.</p>
       </div>
     </header>
@@ -142,6 +142,15 @@
             </div>
           </router-link>
 
+          <router-link to="/hr/search" class="action-card glass-panel">
+            <span class="action-icon">🔍</span>
+            <div class="action-content-card">
+              <h4>Talent Search</h4>
+              <p>Search for best-fitting candidates using AI semantic matching.</p>
+              <span class="action-link-text">Search Talent →</span>
+            </div>
+          </router-link>
+
           <router-link to="/hr-dashboard" class="action-card glass-panel">
             <span class="action-icon">📊</span>
             <div class="action-content-card">
@@ -163,12 +172,12 @@
             </div>
           </router-link>
 
-          <router-link to="/jobseeker/search" class="action-card glass-panel">
+          <router-link to="/jobseeker/scrape" class="action-card glass-panel">
             <span class="action-icon">🔍</span>
             <div class="action-content-card">
-              <h4>Semantic Job Search</h4>
-              <p>Find jobs match by upload of your CV using AI semantic searches.</p>
-              <span class="action-link-text">Search Jobs →</span>
+              <h4>Job Scraper</h4>
+              <p>Scrape real job listings from LinkedIn based on keywords and location.</p>
+              <span class="action-link-text">Scrape Jobs →</span>
             </div>
           </router-link>
 

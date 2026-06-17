@@ -16,6 +16,18 @@ from app.core.mongodb import (
     get_audit_logs_collection,
 )
 
+# Default service ports / URLs
+DEFAULT_BACKEND_URL = "http://localhost:8000"
+DEFAULT_PROMETHEUS_URL = "http://prometheus:9090/-/healthy"
+DEFAULT_GRAFANA_URL = "http://grafana:3000/api/health"
+DEFAULT_MLFLOW_URL = "http://mlflow:5000/health"
+
+# Health check constants
+HEALTH_PING_TIMEOUT = 3
+GITHUB_API_TIMEOUT = 5
+GITHUB_RUNS_PER_PAGE = 1
+MONGO_HEALTHY_CODE = 200
+
 
 # ====================================
 # Audit Logging
@@ -98,8 +110,8 @@ def get_all_users(
 
     if search:
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
+            {"name": {"$regex": re.escape(search), "$options": "i"}},
+            {"email": {"$regex": re.escape(search), "$options": "i"}},
         ]
 
     total = users_col.count_documents(query)
@@ -175,10 +187,10 @@ def get_audit_logs(
 
     if keyword:
         query["$or"] = [
-            {"admin_email": {"$regex": keyword, "$options": "i"}},
-            {"action": {"$regex": keyword, "$options": "i"}},
-            {"target": {"$regex": keyword, "$options": "i"}},
-            {"details": {"$regex": keyword, "$options": "i"}},
+            {"admin_email": {"$regex": re.escape(keyword), "$options": "i"}},
+            {"action": {"$regex": re.escape(keyword), "$options": "i"}},
+            {"target": {"$regex": re.escape(keyword), "$options": "i"}},
+            {"details": {"$regex": re.escape(keyword), "$options": "i"}},
         ]
 
     total = col.count_documents(query)
@@ -196,7 +208,7 @@ def get_audit_logs(
 # System Health
 # ====================================
 
-def _ping_service(url: str, timeout: int = 3) -> Dict[str, Any]:
+def _ping_service(url: str, timeout: int = HEALTH_PING_TIMEOUT) -> Dict[str, Any]:
     """Ping a service URL and return health status."""
     try:
         start = datetime.now()
@@ -214,79 +226,113 @@ def _ping_service(url: str, timeout: int = 3) -> Dict[str, Any]:
         return {"status": "error", "response_ms": None, "code": None, "detail": str(e)}
 
 
-def get_system_health() -> Dict[str, Any]:
-    """Check all service endpoints and return health status."""
-    backend_url = os.getenv("BACKEND_INTERNAL_URL", "http://localhost:8000")
-    prometheus_url = os.getenv("PROMETHEUS_URL", "http://prometheus:9090/-/healthy")
-    grafana_url = os.getenv("GRAFANA_URL", "http://grafana:3000/api/health")
-    mlflow_url = os.getenv("MLFLOW_URL", "http://mlflow:5000/health")
+def _check_backend_health() -> Dict[str, Any]:
+    """Check Backend API health."""
+    backend_url = os.getenv("BACKEND_INTERNAL_URL", DEFAULT_BACKEND_URL)
+    health = _ping_service(f"{backend_url}/")
+    health["name"] = "Backend API"
+    health["icon"] = "server"
+    return health
 
-    # Backend health: ping its own root
-    backend_health = _ping_service(f"{backend_url}/")
-    backend_health["name"] = "Backend API"
-    backend_health["icon"] = "server"
 
-    # MongoDB: check via collection ping
+def _check_mongodb_health() -> Dict[str, Any]:
+    """Check MongoDB health via ping command."""
     try:
         from app.core.mongodb import db
         db.command("ping")
-        mongo_health = {"status": "healthy", "response_ms": None, "code": 200}
+        health = {"status": "healthy", "response_ms": None, "code": MONGO_HEALTHY_CODE}
     except Exception as e:
-        mongo_health = {"status": "error", "response_ms": None, "code": None, "detail": str(e)}
-    mongo_health["name"] = "MongoDB"
-    mongo_health["icon"] = "database"
+        health = {"status": "error", "response_ms": None, "code": None, "detail": str(e)}
+    health["name"] = "MongoDB"
+    health["icon"] = "database"
+    return health
 
-    # Prometheus
-    prom_health = _ping_service(prometheus_url)
-    prom_health["name"] = "Prometheus"
-    prom_health["icon"] = "chart"
 
-    # Grafana
-    grafana_health = _ping_service(grafana_url)
-    grafana_health["name"] = "Grafana"
-    grafana_health["icon"] = "graph"
+def _check_prometheus_health() -> Dict[str, Any]:
+    """Check Prometheus health."""
+    url = os.getenv("PROMETHEUS_URL", DEFAULT_PROMETHEUS_URL)
+    health = _ping_service(url)
+    health["name"] = "Prometheus"
+    health["icon"] = "chart"
+    return health
 
-    # MLflow
-    mlflow_health = _ping_service(mlflow_url)
-    mlflow_health["name"] = "MLflow"
-    mlflow_health["icon"] = "experiment"
 
-    # GitHub Actions — check via GitHub API
+def _check_grafana_health() -> Dict[str, Any]:
+    """Check Grafana health."""
+    url = os.getenv("GRAFANA_URL", DEFAULT_GRAFANA_URL)
+    health = _ping_service(url)
+    health["name"] = "Grafana"
+    health["icon"] = "graph"
+    return health
+
+
+def _check_mlflow_health() -> Dict[str, Any]:
+    """Check MLflow health."""
+    url = os.getenv("MLFLOW_URL", DEFAULT_MLFLOW_URL)
+    health = _ping_service(url)
+    health["name"] = "MLflow"
+    health["icon"] = "experiment"
+    return health
+
+
+def _check_github_health() -> Dict[str, Any]:
+    """Check GitHub Actions CI health via the GitHub API."""
     github_token = os.getenv("GITHUB_TOKEN", "")
     github_repo = os.getenv("GITHUB_REPO", "")
-    if github_token and github_repo:
-        try:
-            resp = requests.get(
-                f"https://api.github.com/repos/{github_repo}/actions/runs?per_page=1",
-                headers={"Authorization": f"Bearer {github_token}"},
-                timeout=5
-            )
-            if resp.status_code == 200:
-                runs = resp.json().get("workflow_runs", [])
-                conclusion = runs[0].get("conclusion", "unknown") if runs else "unknown"
-                if conclusion == "success":
-                    gh_status = "healthy"
-                elif conclusion in ("failure", "cancelled"):
-                    gh_status = "error"
-                else:
-                    gh_status = "warning"
-                gh_health = {"status": gh_status, "detail": conclusion, "response_ms": None}
+
+    if not (github_token and github_repo):
+        health = {"status": "unknown", "detail": "GITHUB_TOKEN/GITHUB_REPO not configured", "response_ms": None}
+        health["name"] = "GitHub Actions"
+        health["icon"] = "ci"
+        return health
+
+    try:
+        resp = requests.get(
+            f"https://api.github.com/repos/{github_repo}/actions/runs?per_page={GITHUB_RUNS_PER_PAGE}",
+            headers={"Authorization": f"Bearer {github_token}"},
+            timeout=GITHUB_API_TIMEOUT
+        )
+        if resp.status_code == 200:
+            runs = resp.json().get("workflow_runs", [])
+            conclusion = runs[0].get("conclusion", "unknown") if runs else "unknown"
+            if conclusion == "success":
+                gh_status = "healthy"
+            elif conclusion in ("failure", "cancelled"):
+                gh_status = "error"
             else:
-                gh_health = {"status": "warning", "detail": f"HTTP {resp.status_code}", "response_ms": None}
-        except Exception as e:
-            gh_health = {"status": "error", "detail": str(e), "response_ms": None}
-    else:
-        gh_health = {"status": "unknown", "detail": "GITHUB_TOKEN/GITHUB_REPO not configured", "response_ms": None}
-    gh_health["name"] = "GitHub Actions"
-    gh_health["icon"] = "ci"
+                gh_status = "warning"
+            health = {"status": gh_status, "detail": conclusion, "response_ms": None}
+        else:
+            health = {"status": "warning", "detail": f"HTTP {resp.status_code}", "response_ms": None}
+    except Exception as e:
+        health = {"status": "error", "detail": str(e), "response_ms": None}
 
-    services = [backend_health, mongo_health, prom_health, grafana_health, mlflow_health, gh_health]
+    health["name"] = "GitHub Actions"
+    health["icon"] = "ci"
+    return health
 
+
+def _compute_overall_status(services: List[Dict[str, Any]]) -> str:
+    """Compute overall system health from individual service statuses."""
     healthy_count = sum(1 for s in services if s["status"] == "healthy")
-    overall = "healthy" if healthy_count == len(services) else ("warning" if healthy_count > 0 else "error")
+    if healthy_count == len(services):
+        return "healthy"
+    return "warning" if healthy_count > 0 else "error"
+
+
+def get_system_health() -> Dict[str, Any]:
+    """Check all service endpoints and return health status."""
+    services = [
+        _check_backend_health(),
+        _check_mongodb_health(),
+        _check_prometheus_health(),
+        _check_grafana_health(),
+        _check_mlflow_health(),
+        _check_github_health(),
+    ]
 
     return {
-        "overall": overall,
+        "overall": _compute_overall_status(services),
         "services": services,
         "checked_at": datetime.now(timezone.utc).isoformat()
     }
@@ -301,7 +347,7 @@ def get_ai_usage() -> Dict[str, Any]:
     Return AI feature usage counts by reading Prometheus metrics endpoint.
     Falls back to activity log counts if Prometheus is unavailable.
     """
-    prometheus_base = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
+    prometheus_base = os.getenv("PROMETHEUS_URL", DEFAULT_PROMETHEUS_URL)
     # Remove /-/healthy suffix for query API
     prometheus_base = prometheus_base.replace("/-/healthy", "").rstrip("/")
 
@@ -310,7 +356,7 @@ def get_ai_usage() -> Dict[str, Any]:
             resp = requests.get(
                 f"{prometheus_base}/api/v1/query",
                 params={"query": f"sum({metric_name})"},
-                timeout=3
+                timeout=HEALTH_PING_TIMEOUT
             )
             if resp.status_code == 200:
                 data = resp.json()

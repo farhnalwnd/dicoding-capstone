@@ -7,8 +7,8 @@
     <nav v-if="showNavbar" class="navbar">
       <div class="nav-inner">
         <router-link to="/" class="nav-brand" @click="closeMenus">
-          <img class="brand-icon" src="/icon.svg" alt="CV Matcher Pro logo" />
-          <span class="brand-text">CV Matcher Pro</span>
+          <img class="brand-icon" src="/hirezy-logo.png" alt="HIREZY logo" />
+          <span class="brand-text">HIREZY</span>
         </router-link>
 
         <button
@@ -58,8 +58,8 @@
               <router-link to="/jobseeker/analyze" active-class="is-active" @click="closeMenus">
                 CV-JD Analysis
               </router-link>
-              <router-link to="/jobseeker/search" active-class="is-active" @click="closeMenus">
-                Semantic Search
+              <router-link to="/jobseeker/scrape" active-class="is-active" @click="closeMenus">
+                Job Scraper
               </router-link>
               <router-link to="/resume-advisor" active-class="is-active" @click="closeMenus">
                 AI Resume Advisor
@@ -80,6 +80,9 @@
             <div class="dropdown-content">
               <router-link to="/hr/rank" active-class="is-active" @click="closeMenus">
                 Bulk CV Ranking
+              </router-link>
+              <router-link to="/hr/search" active-class="is-active" @click="closeMenus">
+                Talent Search
               </router-link>
               <router-link to="/hr/talent-pool" active-class="is-active" @click="closeMenus">
                 Talent Pool
@@ -112,6 +115,16 @@
             </div>
           </div>
 
+
+          <!-- Theme Toggle -->
+          <button
+            class="theme-toggle-btn"
+            type="button"
+            @click="toggleTheme"
+            aria-label="Toggle Dark Mode"
+          >
+            {{ isDarkMode ? '🌙' : '☀️' }}
+          </button>
 
           <router-link
             v-if="!isLoggedIn"
@@ -163,7 +176,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, provide } from 'vue'
+import { computed, ref, watch, provide, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from './components/ToastNotification.vue'
 import { authState, isAuthenticated, isHR, isJobSeeker, isAdmin, logout } from './stores/auth'
@@ -185,7 +198,7 @@ const openDropdown = ref(null)
 const isJobSeekerActive = computed(() => route.path.startsWith('/jobseeker'))
 const isHrActive = computed(() => route.path.startsWith('/hr'))
 const currentPageTitle = computed(() => {
-  const appName = 'CV Matcher Pro'
+  const appName = 'HIREZY'
   return route.meta?.title ? `${route.meta.title} | ${appName}` : appName
 })
 
@@ -220,13 +233,34 @@ watch(currentPageTitle, (title) => {
 }, { immediate: true })
 
 watch(() => route.fullPath, closeMenus)
+
+const isDarkMode = ref(false)
+
+function toggleTheme() {
+  isDarkMode.value = !isDarkMode.value
+  const theme = isDarkMode.value ? 'dark' : 'light'
+  localStorage.setItem('theme', theme)
+  if (isDarkMode.value) {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}
+
+onMounted(() => {
+  const savedTheme = localStorage.getItem('theme')
+  if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    isDarkMode.value = true
+    document.documentElement.classList.add('dark')
+  }
+})
 </script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* =============================================================
-   DESIGN SYSTEM — Smart Recruit AI  (Enterprise Edition)
+   DESIGN SYSTEM — HIREZY  (Enterprise Edition)
    Inspired by: Ashby, Linear, Stripe Dashboard, Notion
    ============================================================= */
 
@@ -286,6 +320,31 @@ watch(() => route.fullPath, closeMenus)
   --line:         #E2E8F0;
 }
 
+:root.dark {
+  /* Brand override */
+  --primary:        #F8FAFC;
+  --primary-dark:   #F1F5F9;
+  --secondary:      #CBD5E1;
+  
+  /* Neutrals inverted */
+  --bg:             #0F172A;
+  --surface:        #1E293B;
+  --surface-2:      #334155;
+  --border:         #334155;
+  --border-strong:  #475569;
+
+  /* Text inverted */
+  --text:           #F8FAFC;
+  --text-soft:      #F1F5F9;
+  --text-muted:     #94A3B8;
+  --text-subtle:    #64748B;
+  
+  /* Misc */
+  --line:           #334155;
+  --glass-bg:       var(--surface);
+  --glass-border:   var(--border);
+}
+
 /* =============================================================  SCROLLBAR  ============================================================= */
 ::-webkit-scrollbar          { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track    { background: transparent; }
@@ -295,6 +354,23 @@ watch(() => route.fullPath, closeMenus)
 
 /* =============================================================  BASE  ============================================================= */
 * { box-sizing: border-box; }
+
+.theme-toggle-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  color: var(--text);
+}
+.theme-toggle-btn:hover {
+  background-color: var(--surface-2);
+}
 
 body {
   margin: 0; padding: 0;

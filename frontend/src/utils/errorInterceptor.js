@@ -9,9 +9,11 @@ axios.interceptors.response.use(
     // Log original error and stack trace to console for developers
     console.error('[Developer Error Log]', error)
 
+    let serverDetail = error.response?.data?.detail
+
     let errorPayload = {
       type: 'backend',
-      message: 'The AI service encountered an unexpected issue. Please try again in a few moments.',
+      message: serverDetail || 'The AI service encountered an unexpected issue. Please try again in a few moments.',
       originalError: error
     }
 
@@ -21,22 +23,25 @@ axios.interceptors.response.use(
     } else if (!error.response) {
       // Network Error (e.g. server down or offline)
       errorPayload.type = 'network'
-      errorPayload.message = 'Unable to connect to Smart Recruit AI server. Please check your internet connection.'
+      errorPayload.message = 'Unable to connect to HIREZY server. Please check your internet connection.'
     } else {
       const status = error.response.status
       
       switch (status) {
         case 400:
           errorPayload.type = 'validation'
-          errorPayload.message = 'Invalid request.'
+          errorPayload.message = serverDetail || 'Invalid request.'
           break
         case 401:
-          errorPayload.message = 'Access denied. Please check your credentials.'
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
-          delete axios.defaults.headers.common['Authorization']
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login'
+          errorPayload.message = serverDetail || 'Access denied. Please check your credentials.'
+          // Only auto-redirect for non-auth endpoints
+          if (!error.config?.url?.includes('/api/auth/')) {
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            delete axios.defaults.headers.common['Authorization']
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login'
+            }
           }
           break
         case 403:
@@ -52,8 +57,11 @@ axios.interceptors.response.use(
         case 429:
           errorPayload.message = 'Too many requests. Please wait and try again.'
           break
+        case 409:
+          errorPayload.message = serverDetail || 'This resource already exists.'
+          break
         case 500:
-          errorPayload.message = 'Internal server error.'
+          errorPayload.message = serverDetail || 'Internal server error.'
           break
         case 502:
         case 503:

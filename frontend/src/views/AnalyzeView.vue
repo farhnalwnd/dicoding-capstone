@@ -72,6 +72,15 @@
 
     <!-- Results Container -->
     <div v-else class="results detailed-results">
+      <!-- Candidate Name Header -->
+      <div v-if="detailedResult.candidate_name" class="candidate-name-header sub-glass-card">
+        <span class="candidate-icon">👤</span>
+        <div class="candidate-info">
+          <span class="candidate-label">Candidate</span>
+          <h3 class="candidate-name-value">{{ detailedResult.candidate_name }}</h3>
+        </div>
+      </div>
+
       <!-- Render ExplainabilityCard if reasoning is available -->
       <ExplainabilityCard
         v-if="detailedResult.reasoning"
@@ -583,6 +592,40 @@ const matchDetailed = async () => {
   .btn-advisor-cta {
     margin-left: 0;
   }
+}
+
+/* Candidate Name Header */
+.candidate-name-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--primary);
+}
+
+.candidate-icon {
+  font-size: 2rem;
+}
+
+.candidate-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.candidate-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.candidate-name-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary, #f1f5f9);
+  margin: 0;
 }
 
 </style>

@@ -3,13 +3,11 @@ from bs4 import BeautifulSoup
 import time
 import random
 import os
-from pymongo import MongoClient
 import urllib.parse
+from app.core.mongodb import get_jobs_collection as _get_jobs_collection
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://admin:password@localhost:27017/")
-client = MongoClient(MONGO_URI)
-db = client.cv_matcher
-jobs_collection = db.linkedin_jobs
+# Use the shared MongoDB connection - the collection reference
+jobs_collection = _get_jobs_collection()
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",

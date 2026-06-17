@@ -5,7 +5,7 @@
         <span class="search-icon">🔍</span>
       </div>
       <div>
-        <h3 class="search-title">Semantic Candidate Search</h3>
+        <h3 class="search-title">Semantic Talent Search</h3>
         <p class="search-subtitle">Find the most relevant talent by typing job roles, skills, or requirements.</p>
       </div>
     </div>

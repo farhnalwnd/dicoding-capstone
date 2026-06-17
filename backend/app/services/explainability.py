@@ -86,7 +86,7 @@ def build_match_explanation(
         final_score
     )
 
-    return {
+    result = {
 
         "match_score": final_score,
 
@@ -118,3 +118,9 @@ def build_match_explanation(
                 recommendation
             )
     }
+
+    # Record the final match score in Prometheus
+    from app.core.metrics import MATCH_SCORE_DISTRIBUTION
+    MATCH_SCORE_DISTRIBUTION.observe(final_score)
+    
+    return result

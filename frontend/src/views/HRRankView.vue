@@ -205,7 +205,7 @@
         
         <div class="modal-body">
           <div class="chart-container">
-            <h4>Domain Skills Analysis</h4>
+            <h4>Candidate Competency Radar</h4>
             <div v-if="chartData" class="radar-wrapper">
               <Radar :data="chartData" :options="chartOptions" />
             </div>
@@ -658,29 +658,42 @@ const openModal = (candidate) => {
   selectedCandidate.value = candidate
   generatedQuestions.value = []
   
-  if (candidate.skill_scores && Object.keys(candidate.skill_scores).length > 0) {
-    // Ambil top 8 skills untuk ditampilkan agar tidak terlalu padat
-    const sortedSkills = Object.entries(candidate.skill_scores)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      
-    chartData.value = {
-      labels: sortedSkills.map(s => s[0]),
-      datasets: [
-        {
-          label: 'Proficiency (%)',
-          backgroundColor: 'rgba(14, 165, 233, 0.2)',
-          borderColor: 'rgba(14, 165, 233, 1)',
-          pointBackgroundColor: 'rgba(14, 165, 233, 1)',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(14, 165, 233, 1)',
-          data: sortedSkills.map(s => s[1])
-        }
-      ]
-    }
-  } else {
-    chartData.value = null
+  // Build 6-dimension Competency Radar (always full, always insightful)
+  const semanticMatch = candidate.semantic_score ?? 0
+  const skillCoverage = candidate.domain_skill_score ?? 0
+  const domainRelevance = candidate.domain_relevance ?? 0
+  const experienceDepth = candidate.experience_depth ?? 0
+  const skillBreadth = candidate.skill_breadth ?? 0
+  const overallScore = candidate.score ?? 0
+
+  chartData.value = {
+    labels: [
+      'Semantic Match',
+      'Skill Coverage',
+      'Domain Relevance',
+      'Experience Depth',
+      'Skill Breadth',
+      'Overall Score'
+    ],
+    datasets: [
+      {
+        label: candidate.name || 'Candidate',
+        backgroundColor: 'rgba(14, 165, 233, 0.2)',
+        borderColor: 'rgba(14, 165, 233, 1)',
+        pointBackgroundColor: 'rgba(14, 165, 233, 1)',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgba(14, 165, 233, 1)',
+        data: [
+          semanticMatch,
+          skillCoverage,
+          domainRelevance,
+          experienceDepth,
+          skillBreadth,
+          overallScore
+        ]
+      }
+    ]
   }
 }
 

@@ -2,6 +2,27 @@ from prometheus_client import Counter
 from prometheus_client import Histogram
 
 # ====================================
+# Model & AI Metrics
+# ====================================
+
+MODEL_INFERENCE_LATENCY = Histogram(
+    "model_inference_latency_seconds",
+    "Time spent running Bi-Encoder inference"
+)
+
+MATCH_SCORE_DISTRIBUTION = Histogram(
+    "match_score_distribution",
+    "Distribution of final match scores",
+    buckets=(0, 20, 40, 60, 80, 100)
+)
+
+DOMAIN_CLASSIFICATION_COUNT = Counter(
+    "domain_classification_total",
+    "Counts of CVs categorized by domain",
+    ["domain"]
+)
+
+# ====================================
 # Request Counter
 # ====================================
 

@@ -1,10 +1,53 @@
 <template>
   <div class="auth-container">
-    <div class="auth-card glass-panel">
+    <!-- Role Selection Screen (shown after Google sign-up for new users) -->
+    <div v-if="showRoleSelection" class="auth-card glass-panel role-selection-card">
       <div class="auth-header">
-        <img class="auth-logo" src="/icon.svg" alt="CV Matcher Pro logo" />
+        <img class="auth-logo" src="/hirezy-logo.png" alt="HIREZY logo" />
+        <h2>Choose Your Role</h2>
+        <p class="subtitle">How will you use HIREZY?</p>
+      </div>
+
+      <div class="role-cards">
+        <button
+          class="role-card glass-panel"
+          :class="{ 'is-selected': selectedRole === 'jobseeker' }"
+          :disabled="roleLoading"
+          @click="selectedRole = 'jobseeker'"
+        >
+          <span class="role-card-icon">💼</span>
+          <h3>Job Seeker</h3>
+          <p>Find your dream job with AI-powered matching</p>
+        </button>
+
+        <button
+          class="role-card glass-panel"
+          :class="{ 'is-selected': selectedRole === 'hr' }"
+          :disabled="roleLoading"
+          @click="selectedRole = 'hr'"
+        >
+          <span class="role-card-icon">📈</span>
+          <h3>HR Professional</h3>
+          <p>Rank and analyze candidates efficiently</p>
+        </button>
+      </div>
+
+      <button
+        class="btn-primary auth-submit-btn"
+        :disabled="!selectedRole || roleLoading"
+        @click="handleRoleSelect"
+      >
+        <span v-if="roleLoading" class="spinner"></span>
+        <span>{{ roleLoading ? 'Setting up...' : 'Continue' }}</span>
+      </button>
+    </div>
+
+    <!-- Normal Login Card -->
+    <div v-else class="auth-card glass-panel">
+      <div class="auth-header">
+        <img class="auth-logo" src="/hirezy-logo.png" alt="HIREZY logo" />
         <h2>Welcome Back</h2>
-        <p class="subtitle">Log in to your CV Matcher Pro account</p>
+        <p class="subtitle">Log in to your HIREZY account</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="auth-form">
@@ -63,7 +106,7 @@
 <script setup>
 import { ref, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, loginWithGoogle } from '../stores/auth'
+import { login, loginWithGoogle, setRole } from '../stores/auth'
 
 const router = useRouter()
 const toast = inject('toast')
@@ -73,6 +116,11 @@ const password = ref('')
 const loading = ref(false)
 const error = ref(null)
 const googleBtn = ref(null)
+
+// Role selection state
+const showRoleSelection = ref(false)
+const selectedRole = ref(null)
+const roleLoading = ref(false)
 
 function getRedirectByRole(role) {
   if (role === 'admin')     return '/admin'
@@ -100,14 +148,34 @@ async function handleGoogleCallback(response) {
   loading.value = true
   error.value = null
   try {
-    const user = await loginWithGoogle(response.credential)
-    toast?.success(`Welcome, ${user.name}!`)
-    router.push(getRedirectByRole(user.role))
+    const result = await loginWithGoogle(response.credential)
+    if (result.needs_role_selection) {
+      showRoleSelection.value = true
+    } else {
+      toast?.success(`Welcome, ${result.user.name}!`)
+      router.push(getRedirectByRole(result.user.role))
+    }
   } catch (err) {
     error.value = err.message || 'Google authentication failed.'
     toast?.error(error.value)
   } finally {
     loading.value = false
+  }
+}
+
+async function handleRoleSelect() {
+  if (!selectedRole.value) return
+  roleLoading.value = true
+  error.value = null
+  try {
+    const user = await setRole(selectedRole.value)
+    toast?.success(`Welcome, ${user.name}! Your account is ready.`)
+    router.push(getRedirectByRole(user.role))
+  } catch (err) {
+    error.value = err.message || 'Failed to set role.'
+    toast?.error(error.value)
+  } finally {
+    roleLoading.value = false
   }
 }
 
@@ -283,5 +351,69 @@ onMounted(() => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ============================
+   Role Selection Styles
+   ============================ */
+.role-selection-card {
+  max-width: 560px;
+}
+
+.role-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  padding: 1.75rem 1.25rem;
+  cursor: pointer;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+}
+
+.role-card:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.role-card.is-selected {
+  border-color: var(--accent);
+  background: rgba(14, 165, 164, 0.04);
+  box-shadow: 0 0 0 3px rgba(14, 165, 164, 0.12);
+}
+
+.role-card-icon {
+  font-size: 2.2rem;
+}
+
+.role-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.role-card p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+  .role-cards {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

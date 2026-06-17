@@ -7,7 +7,7 @@
           AI Recruitment Assistant
         </span>
 
-        <h1>Welcome to CV Matcher Pro</h1>
+        <h1>Welcome to HIREZY</h1>
         <p>
           Match CVs with job descriptions, rank candidates, and discover relevant skills through a simple AI-powered recruitment workflow.
         </p>
@@ -23,7 +23,7 @@
         </div>
       </div>
 
-      <div class="workflow-preview" aria-label="CV Matcher Pro workflow preview">
+      <div class="workflow-preview" aria-label="HIREZY workflow preview">
         <div class="preview-glow"></div>
 
         <div class="preview-header">

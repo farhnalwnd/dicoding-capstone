@@ -55,7 +55,7 @@ const getDefaultTitle = (type) => {
 
 const getDefaultMessage = (type) => {
   switch (type) {
-    case 'network': return 'Unable to connect to Smart Recruit AI server. Please check your internet connection.'
+    case 'network': return 'Unable to connect to HIREZY server. Please check your internet connection.'
     case 'validation': return 'Please verify that all fields and uploads are correct.'
     case 'timeout': return 'The analysis is taking longer than expected. Please try again.'
     case 'empty': return 'Try different keywords or criteria.'

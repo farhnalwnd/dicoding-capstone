@@ -2,6 +2,25 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from app.core.mongodb import get_candidates_collection, get_activity_collection
 
+# Trend calculation constants
+TREND_CURRENT_DAYS = 7
+TREND_PREVIOUS_DAYS = 14
+PERCENTAGE_MULTIPLIER = 100
+
+# Aggregation limits
+TOP_SKILLS_LIMIT = 10
+DATE_SUBSTR_LENGTH = 10
+
+# Action label mapping for activity timeline
+ACTION_LABEL_MAP = {
+    "added": "Candidates Added",
+    "talent_pool": "Talent Pool Transfers",
+    "interview": "Interview Transfers",
+    "interview_scheduled": "Interview Scheduled",
+    "hired": "Hiring Decisions",
+    "rejected": "Rejection Decisions"
+}
+
 def parse_iso_date(date_str: str) -> Optional[datetime]:
     try:
         # Try parsing standard ISO format
@@ -32,61 +51,65 @@ def build_filter_query(start_date: Optional[str] = None, end_date: Optional[str]
         
     return query
 
+def _build_period_query(
+    query_base: Dict[str, Any],
+    status: str,
+    period_start: str,
+    period_end: str,
+    fallback_gte: str,
+    use_lt: bool = False
+) -> Dict[str, Any]:
+    """Build a date-filtered query for a specific time period."""
+    q = query_base.copy()
+    if status != "total":
+        q["status"] = status
+
+    if "created_at" in q and isinstance(q["created_at"], dict):
+        existing_gte = q["created_at"].get("$gte", fallback_gte)
+        if use_lt:
+            q["created_at"] = {"$gte": max(existing_gte, period_start), "$lt": period_end}
+        else:
+            q["created_at"] = {"$gte": max(existing_gte, period_start), "$lte": period_end}
+    else:
+        if use_lt:
+            q["created_at"] = {"$gte": period_start, "$lt": period_end}
+        else:
+            q["created_at"] = {"$gte": period_start}
+
+    return q
+
+
+def _format_trend_percentage(curr_count: int, prev_count: int) -> str:
+    """Format a trend percentage string from two period counts."""
+    if prev_count == 0:
+        return f"+{curr_count * PERCENTAGE_MULTIPLIER}%" if curr_count > 0 else "0%"
+    diff_pct = int(((curr_count - prev_count) / prev_count) * PERCENTAGE_MULTIPLIER)
+    if diff_pct >= 0:
+        return f"+{diff_pct}%"
+    return f"{diff_pct}%"
+
+
 def calculate_trend(status: str, query_base: Dict[str, Any]) -> str:
     candidates_col = get_candidates_collection()
     now = datetime.now(timezone.utc)
-    
-    seven_days_ago = (now - timedelta(days=7)).isoformat()
-    fourteen_days_ago = (now - timedelta(days=14)).isoformat()
-    
-    # Build query for last 7 days
-    q_curr = query_base.copy()
-    if status != "total":
-        q_curr["status"] = status
-    
-    # Merge date range for current 7 days
-    if "created_at" in q_curr:
-        if isinstance(q_curr["created_at"], dict):
-            # Intersect with last 7 days
-            existing_gte = q_curr["created_at"].get("$gte", fourteen_days_ago)
-            q_curr["created_at"] = {
-                "$gte": max(existing_gte, seven_days_ago),
-                "$lte": q_curr["created_at"].get("$lte", now.isoformat())
-            }
-    else:
-        q_curr["created_at"] = {"$gte": seven_days_ago}
-        
-    # Build query for previous 7 days
-    q_prev = query_base.copy()
-    if status != "total":
-        q_prev["status"] = status
-        
-    if "created_at" in q_prev:
-        if isinstance(q_prev["created_at"], dict):
-            existing_gte = q_prev["created_at"].get("$gte", fourteen_days_ago)
-            q_prev["created_at"] = {
-                "$gte": max(existing_gte, fourteen_days_ago),
-                "$lt": seven_days_ago
-            }
-    else:
-        q_prev["created_at"] = {
-            "$gte": fourteen_days_ago,
-            "$lt": seven_days_ago
-        }
-        
+
+    seven_days_ago = (now - timedelta(days=TREND_CURRENT_DAYS)).isoformat()
+    fourteen_days_ago = (now - timedelta(days=TREND_PREVIOUS_DAYS)).isoformat()
+
+    q_curr = _build_period_query(
+        query_base, status, seven_days_ago, now.isoformat(), fourteen_days_ago
+    )
+    q_prev = _build_period_query(
+        query_base, status, fourteen_days_ago, seven_days_ago, fourteen_days_ago, use_lt=True
+    )
+
     try:
         curr_count = candidates_col.count_documents(q_curr)
         prev_count = candidates_col.count_documents(q_prev)
     except Exception:
         return "0%"
-        
-    if prev_count == 0:
-        return f"+{curr_count * 100}%" if curr_count > 0 else "0%"
-        
-    diff_pct = int(((curr_count - prev_count) / prev_count) * 100)
-    if diff_pct >= 0:
-        return f"+{diff_pct}%"
-    return f"{diff_pct}%"
+
+    return _format_trend_percentage(curr_count, prev_count)
 
 def get_recruitment_stats(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> Dict[str, Any]:
     candidates_col = get_candidates_collection()
@@ -191,7 +214,7 @@ def get_top_skills(start_date: Optional[str] = None, end_date: Optional[str] = N
         {"$unwind": "$skills"},
         {"$group": {"_id": "$skills", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
-        {"$limit": 10}
+        {"$limit": TOP_SKILLS_LIMIT}
     ]
     
     try:
@@ -228,12 +251,12 @@ def get_job_categories(start_date: Optional[str] = None, end_date: Optional[str]
     except Exception:
         return []
 
-def get_activity_timeline(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:
-    activity_col = get_activity_collection()
-    
-    # Filter on activity logs
-    # To support job domain filter, we need to join or match the candidate's domain.
-    # Since activity logs store simple details, let's match domain using candidate database references if domain is set.
+def _build_activity_match_query(
+    start_date: Optional[str],
+    end_date: Optional[str],
+    domain: Optional[str]
+) -> Dict[str, Any]:
+    """Build the $match query for activity timeline aggregation."""
     match_query = {}
     if start_date or end_date:
         date_q = {}
@@ -242,74 +265,65 @@ def get_activity_timeline(start_date: Optional[str] = None, end_date: Optional[s
         if end_date:
             date_q["$lte"] = end_date
         match_query["timestamp"] = date_q
-        
+
     if domain and domain.strip() and domain.lower() != "all":
-        # Get candidate IDs matching the domain
         candidates_col = get_candidates_collection()
         candidate_ids = [str(c["_id"]) for c in candidates_col.find({"domain": domain}, {"_id": 1})]
         match_query["candidate_id"] = {"$in": candidate_ids}
-        
-    pipeline = [
+
+    return match_query
+
+
+def _build_activity_pipeline(match_query: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Build the aggregation pipeline for activity timeline."""
+    return [
         {"$match": match_query},
-        {
-            "$project": {
-                "day": {"$substr": ["$timestamp", 0, 10]}, # Group by YYYY-MM-DD
-                "action": "$action"
-            }
-        },
-        {
-            "$group": {
-                "_id": {"day": "$day", "action": "$action"},
-                "count": {"$sum": 1}
-            }
-        },
+        {"$project": {
+            "day": {"$substr": ["$timestamp", 0, DATE_SUBSTR_LENGTH]},
+            "action": "$action"
+        }},
+        {"$group": {
+            "_id": {"day": "$day", "action": "$action"},
+            "count": {"$sum": 1}
+        }},
         {"$sort": {"_id.day": 1}}
     ]
-    
+
+
+def _format_timeline_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Group aggregation results by day and map action keys."""
+    timeline_map = {}
+
+    for r in results:
+        day = r["_id"]["day"]
+        action = r["_id"]["action"]
+        count = r["count"]
+
+        if day not in timeline_map:
+            timeline_map[day] = {
+                "date": day,
+                "added": 0,
+                "talent_pool": 0,
+                "interview": 0,
+                "hired": 0,
+                "rejected": 0
+            }
+
+        key = "interview" if action == "interview_scheduled" else action
+
+        if key in timeline_map[day]:
+            timeline_map[day][key] += count
+
+    return sorted(timeline_map.values(), key=lambda x: x["date"])
+
+
+def get_activity_timeline(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:
+    activity_col = get_activity_collection()
+    match_query = _build_activity_match_query(start_date, end_date, domain)
+    pipeline = _build_activity_pipeline(match_query)
+
     try:
         results = list(activity_col.aggregate(pipeline))
-        
-        # Format:
-        # Group by day, showing count for each activity action
-        timeline_map = {}
-        action_mapping = {
-            "added": "Candidates Added",
-            "talent_pool": "Talent Pool Transfers",
-            "interview": "Interview Transfers",
-            "interview_scheduled": "Interview Scheduled",
-            "hired": "Hiring Decisions",
-            "rejected": "Rejection Decisions"
-        }
-        
-        for r in results:
-            day = r["_id"]["day"]
-            action = r["_id"]["action"]
-            action_label = action_mapping.get(action, action.replace("_", " ").capitalize())
-            count = r["count"]
-            
-            if day not in timeline_map:
-                timeline_map[day] = {
-                    "date": day,
-                    "added": 0,
-                    "talent_pool": 0,
-                    "interview": 0,
-                    "hired": 0,
-                    "rejected": 0
-                }
-            
-            # Map database action string to frontend keys
-            key = action
-            if action == "interview_scheduled":
-                # merge with interview or keep separate
-                key = "interview"
-            
-            if key in timeline_map[day]:
-                timeline_map[day][key] += count
-                
-        # Fill missing dates to make line chart continuous if it is empty, or sort
-        timeline_list = sorted(timeline_map.values(), key=lambda x: x["date"])
-        
-        # If no activities, return dummy template or empty list
-        return timeline_list
+        return _format_timeline_results(results)
     except Exception:
         return []

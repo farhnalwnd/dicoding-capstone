@@ -9,7 +9,7 @@
     />
 
     <h2 class="view-title">🔍 Semantic Talent Search</h2>
-    <p class="subtitle">Search for the best-fitting candidates semantically using AI representation matching.</p>
+    <p class="subtitle">Search for the best-fitting candidates semantically using AI-powered matching.</p>
     
     <!-- Section 1 — Search Area -->
     <SemanticSearchCard :loading="showLoader || loading" @search="handleSearch" />

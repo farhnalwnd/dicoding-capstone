@@ -3,8 +3,9 @@ from typing import Optional
 import asyncio
 
 from app.core.auth import get_current_user
+from app.core.file_validation import validate_upload_file, sanitize_filename
 
-from app.services.parser import extract_text, clean_text
+from app.services.parser import extract_text, extract_candidate_name, clean_text
 from app.services.nlp import (
     analyze_cv_jd,
     model
@@ -22,7 +23,50 @@ from app.core.metrics import (
     SEMANTIC_SEARCH_COUNT,
     SCRAPE_RECOMMEND_COUNT
 )
+MAX_PERCENTAGE = 100.0
+
 router = APIRouter()
+
+
+def _fetch_scraped_jobs(keyword: str, location: str):
+    """Fetch recently scraped jobs from MongoDB matching keyword and location."""
+    jobs_collection = get_jobs_collection()
+    # Gunakan regex untuk location karena LinkedIn location formatnya panjang (misal: "Jakarta, Indonesia")
+    jobs = list(
+        jobs_collection.find(
+            {
+                "keyword_searched": keyword,
+                "location": {"$regex": location, "$options": "i"}
+            }
+        )
+        .sort("scraped_at", -1)
+        .limit(20)
+    )
+    return [
+        {
+            "title": job["title"],
+            "company": job["company"],
+            "location": job["location"],
+            "url": job["url"]
+        }
+        for job in jobs
+    ]
+
+
+def _parse_and_analyze_cv(file_bytes: bytes, filename: str, job_description: str, domain: str):
+    """Parse CV file and run analysis against a job description."""
+    cv_text = extract_text(file_bytes, filename)
+    jd_clean = clean_text(job_description)
+    result = analyze_cv_jd(
+        cv_text=cv_text,
+        jd_text=jd_clean,
+        domain=domain
+    )
+    result["domain"] = domain
+    result["candidate_name"] = extract_candidate_name(cv_text, filename, file_bytes)
+    return result
+
+
 @router.post("/scrape-recommend")
 async def scrape_and_recommend(
     time_range: str = Form("1w"),
@@ -46,29 +90,7 @@ async def scrape_and_recommend(
         )
 
         # Step 2: Get jobs from MongoDB
-        jobs_collection = get_jobs_collection()
-
-        jobs = list(
-            jobs_collection.find(
-                {
-                    "keyword_searched": keyword,
-                    "location": location
-                }
-            )
-            .sort("scraped_at", -1)
-            .limit(20)
-        )
-
-        job_results = []
-
-        for job in jobs:
-
-            job_results.append({
-                "title": job["title"],
-                "company": job["company"],
-                "location": job["location"],
-                "url": job["url"]
-            })
+        job_results = _fetch_scraped_jobs(keyword, location)
 
         return {
             "scraped_count": scraped_count,
@@ -100,25 +122,9 @@ async def match_cv_to_job_detailed(
 
     try:
         file_bytes = await cv.read()
-
-        cv_text = extract_text(
-            file_bytes,
-            cv.filename
-        )
-
-        jd_clean = clean_text(
-            job_description
-        )
-
-        result = analyze_cv_jd(
-            cv_text=cv_text,
-            jd_text=jd_clean,
-            domain=domain
-        )
-
-        result["domain"] = domain
-
-        return result
+        validate_upload_file(cv.filename, file_bytes)
+        safe_filename = sanitize_filename(cv.filename)
+        return _parse_and_analyze_cv(file_bytes, safe_filename, job_description, domain)
 
     finally:
         REQUEST_LATENCY.labels(
@@ -195,18 +201,55 @@ async def perform_candidate_semantic_search(query_str: str):
         if similarities.numel() < len(CANDIDATES_POOL):
             similarities = torch.full((len(CANDIDATES_POOL),), float(similarities[0]))
             
-        results = []
-        for i, c in enumerate(CANDIDATES_POOL):
-            score = round(max(0.0, min(1.0, float(similarities[i]))) * 100, 2)
-            results.append({
-                "candidate_name": c["candidate_name"],
-                "similarity_score": score,
-                "skills": c["skills"]
-            })
-        results.sort(key=lambda x: x["similarity_score"], reverse=True)
+        results = _rank_candidates_by_similarity(similarities)
         return {"results": results}
     finally:
         REQUEST_LATENCY.labels(endpoint="semantic_search").observe(time.time() - start_time)
+
+def _rank_candidates_by_similarity(similarities):
+    """Build ranked candidate results from cosine similarity scores."""
+    results = []
+    for i, c in enumerate(CANDIDATES_POOL):
+        score = round(max(0.0, min(1.0, float(similarities[i]))) * MAX_PERCENTAGE, 2)
+        results.append({
+            "candidate_name": c["candidate_name"],
+            "similarity_score": score,
+            "skills": c["skills"]
+        })
+    results.sort(key=lambda x: x["similarity_score"], reverse=True)
+    return results
+
+
+def _search_jobs_by_cv(cv_text: str):
+    """Perform semantic search over MongoDB jobs using CV text embedding."""
+    query_emb = model.encode(cv_text, convert_to_tensor=True)
+    jobs_collection = get_jobs_collection()
+    jobs = list(
+        jobs_collection.find(
+            {"description_embedding": {"$exists": True}}
+        )
+    )
+    if not jobs:
+        return []
+    desc_embs = torch.tensor(
+        [job["description_embedding"] for job in jobs]
+    )
+    similarities = util.cos_sim(query_emb, desc_embs)[0]
+    results = []
+    for i, job in enumerate(jobs):
+        score = round(
+            max(0.0, min(1.0, float(similarities[i]))) * MAX_PERCENTAGE, 2
+        )
+        results.append({
+            "title": job["title"],
+            "company": job["company"],
+            "location": job["location"],
+            "url": job["url"],
+            "score": score
+        })
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results[:10]
+
 
 @router.post("/jobs/semantic-search")
 async def semantic_job_search(
@@ -239,56 +282,7 @@ async def semantic_job_search(
         try:
             file_bytes = await cv.read()
             cv_text = extract_text(file_bytes, cv.filename)
-            query_emb = model.encode(
-                cv_text,
-                convert_to_tensor=True
-            )
-            jobs_collection = get_jobs_collection()
-            jobs = list(
-                jobs_collection.find(
-                    {
-                        "description_embedding": {
-                            "$exists": True
-                        }
-                    }
-                )
-            )
-            if not jobs:
-                return []
-            desc_embs = torch.tensor(
-                [
-                    job["description_embedding"]
-                    for job in jobs
-                ]
-            )
-            similarities = util.cos_sim(
-                query_emb,
-                desc_embs
-            )[0]
-            results = []
-            for i, job in enumerate(jobs):
-                score = round(
-                    max(
-                        0.0,
-                        min(
-                            1.0,
-                            float(similarities[i])
-                        )
-                    ) * 100,
-                    2
-                )
-                results.append({
-                    "title": job["title"],
-                    "company": job["company"],
-                    "location": job["location"],
-                    "url": job["url"],
-                    "score": score
-                })
-            results.sort(
-                key=lambda x: x["score"],
-                reverse=True
-            )
-            return results[:10]
+            return _search_jobs_by_cv(cv_text)
         finally:
             REQUEST_LATENCY.labels(
                 endpoint="semantic_search"
@@ -342,21 +336,7 @@ def run_match_detailed_task(job_id: str, file_bytes: bytes, filename: str, job_d
         
         progress_manager.update_progress(job_id, 85, "Generating Explainability")
 
-        # Compute domain relevance: how many of ALL domain skills appear in the CV
-        from app.core.domain_loader import load_domain_config
-        from app.services.nlp import has_skill_exact
-        config = load_domain_config(domain)
-        all_domain_skills = config.get("skills", [])
-        if all_domain_skills:
-            cv_domain_hits = sum(
-                1 for s in all_domain_skills
-                if has_skill_exact(s, cv_text)
-            )
-            domain_relevance = round(
-                (cv_domain_hits / len(all_domain_skills)) * 100, 2
-            )
-        else:
-            domain_relevance = 0.0
+        domain_relevance = _compute_domain_relevance(cv_text, domain)
 
         result = build_match_explanation(
             similarity_score=similarity_score,
@@ -369,11 +349,29 @@ def run_match_detailed_task(job_id: str, file_bytes: bytes, filename: str, job_d
         
         progress_manager.update_progress(job_id, 95, "Finalizing Results")
         result["domain"] = domain
+        result["candidate_name"] = extract_candidate_name(cv_text, filename)
         time.sleep(0.2)
         
         progress_manager.complete_job(job_id, result)
     except Exception as e:
         progress_manager.fail_job(job_id, f"Failed to analyze: {str(e)}")
+
+
+def _compute_domain_relevance(cv_text: str, domain: str) -> float:
+    """Compute domain relevance: how many of ALL domain skills appear in the CV."""
+    from app.core.domain_loader import load_domain_config
+    from app.services.nlp import has_skill_exact
+    config = load_domain_config(domain)
+    all_domain_skills = config.get("skills", [])
+    if not all_domain_skills:
+        return 0.0
+    cv_domain_hits = sum(
+        1 for s in all_domain_skills
+        if has_skill_exact(s, cv_text)
+    )
+    return round(
+        (cv_domain_hits / len(all_domain_skills)) * MAX_PERCENTAGE, 2
+    )
 
 
 def run_semantic_search_task(job_id: str, query_str: str):
@@ -395,15 +393,7 @@ def run_semantic_search_task(job_id: str, query_str: str):
         time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 85, "Ranking Results")
-        results = []
-        for i, c in enumerate(CANDIDATES_POOL):
-            score = round(max(0.0, min(1.0, float(similarities[i]))) * 100, 2)
-            results.append({
-                "candidate_name": c["candidate_name"],
-                "similarity_score": score,
-                "skills": c["skills"]
-            })
-        results.sort(key=lambda x: x["similarity_score"], reverse=True)
+        results = _rank_candidates_by_similarity(similarities)
         time.sleep(0.2)
         
         progress_manager.complete_job(job_id, {"results": results})

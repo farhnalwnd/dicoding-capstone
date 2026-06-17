@@ -1,49 +1,80 @@
-name: Backend CI
+name: HIREZY CI/CD
 
 on:
   push:
-    branches:
-      - main
-      - develop
-      - tito/capstone-improvements
-
+    branches: [main, develop, dev]
   pull_request:
+    branches: [main, develop]
 
 jobs:
-  test:
-
+  # === JOB 1: Lint ===
+  lint:
     runs-on: ubuntu-latest
-
     steps:
-
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+      - name: Install lint tools
+        run: pip install flake8 black isort
+      - name: Run flake8
+        run: cd backend && flake8 app/ --max-line-length=120 --exclude=__pycache__
+      - name: Check black formatting
+        run: cd backend && black --check app/
+      - name: Check import sorting
+        run: cd backend && isort --check-only app/
 
-      - name: Install Dependencies
+  # === JOB 2: Unit Tests (Mock) ===
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
         run: |
           cd backend
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-
-      - name: Run Tests
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests with coverage
         run: |
           cd backend
-          python -m pytest test -v
+          python -m pytest test -v --cov=app --cov-report=term --cov-report=xml
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend/coverage.xml
 
-      - name: Run Coverage
-        run: |
-          cd backend
-          python -m pytest test --cov=app --cov-report=term
-
-      - name: Build Backend Docker Image
-        run: |
-          docker build -t cv-matcher-backend ./backend
-
+  # === JOB 3: Docker Build ===
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Backend Image
+        run: docker build -t hirezy-backend ./backend
+      - name: Build Frontend Image
+        run: docker build -t hirezy-frontend ./frontend
       - name: Validate Docker Compose
+        run: docker compose config
+
+  # === JOB 4: Model Validation (Triggered Manually) ===
+  model-validation:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download fine-tuned model
         run: |
-          docker compose config
+          pip install huggingface_hub
+          # User previously indicated they want HuggingFace for model storage
+          # Ensure huggingface-cli is used if repository is private
+          huggingface-cli download farhnalwnd/bi-encoder-cv-matcher --local-dir models/bi-encoder-cv-matcher
+      - name: Run model validation
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          python -m pytest test/test_model_validation.py -v

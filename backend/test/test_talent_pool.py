@@ -57,6 +57,12 @@ class MockCandidatesCollection:
                 filtered.append(c)
         return MockCursor(filtered)
 
+    def find_one(self, query):
+        for c in self.candidates:
+            if all(c.get(k) == v for k, v in query.items()):
+                return c
+        return None
+
     def update_one(self, filter_query, update_query):
         obj_id = filter_query.get("_id")
         set_fields = update_query.get("$set", {})

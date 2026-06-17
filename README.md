@@ -1,8 +1,8 @@
-# 🎯 CV Matcher Pro: Intelligent Recruitment & Talent Analytics Platform
+# 🎯 HIREZY: Intelligent Recruitment & Talent Analytics Platform
 
 ## 📖 Overview
 
-**CV Matcher Pro** is an AI-powered recruitment and talent analytics platform designed to automate candidate screening, job matching, semantic job recommendation, and talent pool management using Natural Language Processing (NLP) and Sentence Transformers. 
+**HIREZY** is an AI-powered recruitment and talent analytics platform designed to automate candidate screening, job matching, semantic job recommendation, and talent pool management using Natural Language Processing (NLP) and Sentence Transformers. 
 
 The system leverages a fine-tuned multilingual Bi-Encoder to support both **Job Seekers** and **Recruiters / HR Professionals** through highly accurate semantic search, explainable AI matching, and talent pool tracking.
 
@@ -156,16 +156,16 @@ A pre-configured dashboard displays real-time API health, latency metrics, and t
 *   **Base Model**: `paraphrase-multilingual-MiniLM-L12-v2` (from SentenceTransformers)
 *   **Fine-Tuned Model**: Located locally in `models/bi-encoder-cv-matcher`
 *   **Training Loss Function**: `MultipleNegativesRankingLoss`
-*   **Dataset**: Synthetic Dataset v4 (generated from custom IT/HR templates)
+*   **Dataset**: 12,480 triplets generated from 4 Kaggle datasets (Job Skills, LinkedIn Jobs, Resume Dataset, Job Descriptions) with hard negative mining and Indonesian back-translation augmentation
 
 ### 📊 Evaluation Results
 
-| Metric | Baseline Model | Fine-Tuned Model |
+| Metric | Baseline (Pretrained) | Fine-Tuned Model |
 | :--- | :---: | :---: |
-| **Precision@5** | 1.0000 | **1.0000** |
-| **Recall@5** | 0.1968 | **0.1968** |
-| **MRR** | 1.0000 | **1.0000** |
-| **NDCG@5** | 1.0000 | **1.0000** |
+| **Test Triplet Accuracy** | 65.46% | **83.41%** |
+| **Val Triplet Accuracy** | 63.86% | **84.13%** |
+| **Improvement** | — | **+17.95%** |
+| **Training Time** | — | **9.8 minutes** |
 
 ---
 
@@ -189,6 +189,13 @@ python -m pytest test --cov=app --cov-report=term
 *   `test_semantic_search.py`: Validates vector search with MongoDB mocks.
 *   `test_hr_rank.py`: Tests the HR bulk candidate ranking logic.
 *   `test_talent_pool.py`: Tests candidate status transitions and talent pool operations.
+*   `test_analytics_dashboard.py`: Tests analytics endpoints.
+*   `test_auth.py`: Tests authentication flows.
+*   `test_candidate_semantic_search.py`: Tests candidate search.
+*   `test_interview_scheduler.py`: Tests interview scheduling.
+*   `test_resume_advisor.py`: Tests resume advisor.
+*   `test_skill_filtering.py`: Tests skill filtering logic.
+*   `conftest.py`: Shared test configuration and fixtures.
 
 ### CI/CD Workflow
 Implemented using GitHub Actions (`.github/workflows/backend.yml`), triggers automatically on `push` and `pull_request` to verify the codebase:
@@ -249,19 +256,15 @@ Implemented using GitHub Actions (`.github/workflows/backend.yml`), triggers aut
 │   │   └── main.js                # App entrypoint
 │   ├── Dockerfile
 │   └── package.json
-├── training/
-│   ├── scripts/
-│   │   ├── generate_dataset.py    # Synthetic data generator
-│   │   └── train_bi_encoder.py    # Bi-Encoder training script
-│   ├── templates/
-│   │   ├── anchor_templates.json  # Job description templates
-│   │   ├── positive_templates.json# Matching CV templates
-│   │   └── negative_templates.json# Non-matching CV templates
-│   └── notebooks/
-│       └── finetuning-model.ipynb # Training orchestrator
-├── data/
-│   └── training/                  # Generated CSV datasets
+├── notebooks/                     # Kaggle Dataset Processing & Model Training
+│   ├── 01_download_and_eda.ipynb
+│   ├── 02_preprocessing.ipynb
+│   ├── 03_triplet_generation.ipynb
+│   └── 04_training_and_eval.ipynb
+├── data/                          # Datasets (gitignored)
 ├── models/                        # Fine-tuned model outputs
+├── docs/                          # Project documentation and slides
+├── monitoring/                    # Prometheus and Grafana configs
 ├── .env.example                   # Env template
 └── docker-compose.yml             # Orchestration file
 ```
@@ -272,7 +275,7 @@ Implemented using GitHub Actions (`.github/workflows/backend.yml`), triggers aut
 
 ### Training Dataset
 
-The project uses synthetic training data generated from domain-specific templates and skill configurations. Datasets are stored in `data/training/` as CSV files.
+The project uses 12,480 triplets generated from 4 Kaggle datasets (Job Skills, LinkedIn Jobs, Resume Dataset, Job Descriptions) with hard negative mining and Indonesian back-translation augmentation. Datasets are stored in `data/training/` as CSV files.
 
 **File Structure:**
 ```
@@ -338,66 +341,29 @@ To add or modify skills for a specific domain, edit the corresponding JSON file 
 | `threshold_direct_match` | `float` | Similarity threshold for direct matching | `0.80` |
 | `threshold_master_match` | `float` | Similarity threshold for master skill matching | `0.82` |
 
-### Customizing Templates
+### Generating Datasets & Training
 
-Templates control how synthetic training data is generated. They are located in `training/templates/`.
-
-**Template Files:**
-| File | Purpose | Example |
-| :--- | :--- | :--- |
-| `anchor_templates.json` | Job description templates | `"Dibutuhkan {role} yang menguasai {skill}"` |
-| `positive_templates.json` | Matching CV templates | `"Pengalaman {years} tahun menggunakan {skill}"` |
-| `negative_templates.json` | Non-matching CV templates | `"Keahlian {skill_unrelated} untuk {role_unrelated}"` |
-
-**Available Placeholders:**
-
-| Placeholder | Source | Description |
-| :--- | :--- | :--- |
-| `{skill}` | Domain `skills` array | Random skill from current domain |
-| `{skill1}`, `{skill2}` | Domain `skills` array | Multiple skills |
-| `{role}` | Domain `roles` array | Random role from current domain |
-| `{years}` | Global | Random experience years |
-| `{company}` | Global | Random company name |
-| `{project}` | Domain `projects` array | Domain-specific project |
-| `{skill_unrelated}` | Other domain's `skills` | Skill from different domain |
-| `{role_unrelated}` | Domain `unrelated_roles` | Unrelated role |
-| `{industry_unrelated}` | Domain `unrelated_industries` | Unrelated industry |
-| `{tool_unrelated}` | Domain `unrelated_tools` | Unrelated tool |
-
-**Example: Adding a template to `it.json`:**
-
-```json
-{
-  "it": [
-    "Dibutuhkan {role} yang menguasai {skill}",
-    "We are looking for a {role} skilled in {skill}",
-    "Minimal {years} tahun pengalaman di {skill} dan {skill2}",
-    "Hiring {role} for {team} team - expert in {skill}"
-  ]
-}
-```
-
-### Generating Datasets
-
-After customizing domains and templates, regenerate the training dataset:
+All dataset preprocessing, triplet generation, and model training are orchestrated sequentially via Jupyter Notebooks.
 
 ```bash
-# Generate 2000 triplets and 2000 pairs
-python training/scripts/generate_dataset.py \
-  --num_triplets 2000 \
-  --num_pairs 2000
-```
+# 1. Download Kaggle datasets and run Exploratory Data Analysis
+jupyter notebook notebooks/01_download_and_eda.ipynb
 
-Or use the Jupyter notebook:
-```bash
-jupyter notebook training/notebooks/finetuning-model.ipynb
+# 2. Preprocess, clean, and map datasets into a unified schema
+jupyter notebook notebooks/02_preprocessing.ipynb
+
+# 3. Generate triplets with hard negative mining
+jupyter notebook notebooks/03_triplet_generation.ipynb
+
+# 4. Train Bi-Encoder model and evaluate metrics
+jupyter notebook notebooks/04_training_and_eval.ipynb
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-*   **Frontend**: Vue 3, Vite, Axios, TailwindCSS / Vanilla CSS
+*   **Frontend**: Vue 3, Vite, Axios, Vanilla CSS
 *   **Backend**: FastAPI, Sentence Transformers, PyTorch, Scikit-Learn, PyPDF, Python-docx
 *   **Database**: MongoDB, Mongo Express
 *   **Monitoring**: Prometheus, Grafana

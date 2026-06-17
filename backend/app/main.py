@@ -11,7 +11,7 @@ from app.api.admin_endpoints import router as admin_router
 from prometheus_client import make_asgi_app
 import os
 
-app = FastAPI(title="CV Summarizer & Job Matching System", docs_url=None)
+app = FastAPI(title="HIREZY API", docs_url=None)
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
@@ -34,9 +34,11 @@ app.mount(
     metrics_app
 )
 
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in CORS_ORIGINS],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

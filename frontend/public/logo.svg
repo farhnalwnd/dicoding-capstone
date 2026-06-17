@@ -1,6 +1,6 @@
 <svg width="520" height="120" viewBox="0 0 520 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">CV Matcher Pro Logo</title>
-  <desc id="desc">Horizontal logo for CV Matcher Pro with resume matching icon and wordmark.</desc>
+  <title id="title">HIREZY Logo</title>
+  <desc id="desc">Horizontal logo for HIREZY with resume matching icon and wordmark.</desc>
   <defs>
     <linearGradient id="g-main" x1="18" y1="16" x2="108" y2="106" gradientUnits="userSpaceOnUse">
       <stop stop-color="#0B63F6"/>
@@ -34,6 +34,5 @@
     <path d="M88 90L101 103" stroke="#0B63F6" stroke-width="7" stroke-linecap="round"/>
   </g>
 
-  <text x="135" y="73" fill="#071B4D" font-family="Inter, Poppins, Segoe UI, Arial, sans-serif" font-size="42" font-weight="800" letter-spacing="-1.5">CV Matcher</text>
-  <text x="393" y="73" fill="url(#g-pro)" font-family="Inter, Poppins, Segoe UI, Arial, sans-serif" font-size="42" font-weight="800" letter-spacing="-1.5">Pro</text>
+  <text x="135" y="73" fill="#071B4D" font-family="Inter, Poppins, Segoe UI, Arial, sans-serif" font-size="48" font-weight="800" letter-spacing="-1">HIREZY</text>
 </svg>

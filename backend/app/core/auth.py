@@ -18,7 +18,9 @@ from app.core.mongodb import get_users_collection
 # Configuration
 # ====================================
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "smart-recruit-ai-super-secret-key-change-in-production")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY environment variable is required. Set it before starting the server.")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
 
@@ -73,13 +75,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=Fals
 
 async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
-    token_query: Optional[str] = Query(None, alias="token")
+    query_token: Optional[str] = Query(None, alias="token"),
 ) -> dict:
     """
     FastAPI dependency that extracts and returns the current user from the JWT token.
     Raises 401 if no token is provided or if the token is invalid.
     """
-    actual_token = token or token_query
+    actual_token = token or query_token
     if actual_token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

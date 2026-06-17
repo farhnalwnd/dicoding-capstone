@@ -1,7 +1,10 @@
+import re
+
 from fastapi import APIRouter, UploadFile, File, Form, Body, BackgroundTasks, Depends, Path, HTTPException
 from typing import List, Tuple, Dict, Any
 from pydantic import BaseModel, Field
 from app.core.auth import require_role
+from app.core.file_validation import validate_upload_file, sanitize_filename
 import time
 import asyncio
 from sentence_transformers import util
@@ -27,6 +30,14 @@ from app.core.metrics import (
 )
 from app.services.progress import progress_manager
 
+
+# --------------- Constants ---------------
+MAX_PERCENTAGE = 100.0
+HTTP_STATUS_NOT_FOUND = 404
+HTTP_STATUS_BAD_REQUEST = 400
+MAX_EXPERIENCE_YEARS = 10
+JOB_TITLE_MAX_LENGTH = 100
+_YEAR_PATTERN = re.compile(r'(\d+)\s*(?:\+\s*)?(?:years?|tahun|th)')
 
 router = APIRouter()
 
@@ -54,7 +65,7 @@ def compute_candidate_score(
     """
     total_skills = len(matched_skills) + len(missing_skills)
     coverage_ratio = (
-        (len(matched_skills) / total_skills) * 100
+        (len(matched_skills) / total_skills) * MAX_PERCENTAGE
         if total_skills > 0 else 0.0
     )
 
@@ -72,7 +83,7 @@ def compute_candidate_score(
             if has_skill_exact(s, cv_text)
         )
         domain_relevance = round(
-            (cv_domain_hits / len(all_domain_skills)) * 100, 2
+            (cv_domain_hits / len(all_domain_skills)) * MAX_PERCENTAGE, 2
         )
     else:
         domain_relevance = 0.0
@@ -85,6 +96,107 @@ def compute_candidate_score(
     )
 
     return final_score, round(coverage_ratio, 2), domain_relevance
+
+
+def _process_single_candidate(
+    cv_text: str, filename: str, jd_clean: str, domain: str,
+    precomputed_target_skills, candidate_name: str
+) -> dict:
+    """Score a single candidate CV against the cleaned job description."""
+    semantic_score = get_similarity_score(cv_text, jd_clean)
+
+    matched_skills, missing_skills, skill_scores = match_cv_jd_hybrid(
+        cv_text, jd_clean, domain, precomputed_target_skills=precomputed_target_skills
+    )
+
+    # Use Tito's compute_candidate_score formula
+    final_score, coverage_ratio, domain_relevance = compute_candidate_score(
+        semantic_score=semantic_score,
+        matched_skills=matched_skills,
+        missing_skills=missing_skills,
+        cv_text=cv_text,
+        domain=domain
+    )
+
+    # Compute additional radar dimensions
+    experience_depth, skill_breadth = _compute_radar_dimensions(
+        cv_text, matched_skills, missing_skills
+    )
+
+    return {
+        "name": candidate_name,
+        "score": final_score,
+        "semantic_score": semantic_score,
+        "domain_skill_score": coverage_ratio,
+        "domain_relevance": domain_relevance,
+        "experience_depth": experience_depth,
+        "skill_breadth": skill_breadth,
+        "matched_skills_count": len(matched_skills),
+        "missing_skills_count": len(missing_skills),
+        "matched_skills": matched_skills,
+        "missing_skills": missing_skills,
+        "skill_scores": skill_scores,
+        "domain": domain,
+        "filename": filename
+    }
+
+
+def _compute_radar_dimensions(
+    cv_text: str, matched_skills: list, missing_skills: list
+) -> tuple:
+    """Compute experience depth and skill breadth radar dimensions."""
+    # Experience Depth: heuristic based on years/experience mentions in CV
+    year_mentions = _YEAR_PATTERN.findall(cv_text.lower())
+    max_years = max([int(y) for y in year_mentions], default=0)
+    experience_depth = min(
+        MAX_PERCENTAGE,
+        round((max_years / MAX_EXPERIENCE_YEARS) * MAX_PERCENTAGE, 2)
+    )  # 10+ years = 100%
+
+    # Skill Breadth: how many unique skills the candidate has relative to matched + missing
+    total_skills = len(matched_skills) + len(missing_skills)
+    skill_breadth = min(
+        MAX_PERCENTAGE,
+        round((len(matched_skills) / max(total_skills, 1)) * MAX_PERCENTAGE, 2)
+    )
+    return experience_depth, skill_breadth
+
+
+def _extract_job_title(job_description: str) -> str:
+    """Extract a job title from the first line of a job description."""
+    first_line = job_description.strip().split('\n')[0].strip()
+    job_title = first_line[:JOB_TITLE_MAX_LENGTH] if len(first_line) > JOB_TITLE_MAX_LENGTH else first_line
+    return job_title if job_title else "Unknown Position"
+
+
+def _save_ranked_candidates(candidates: list, job_title: str, log_fn=None):
+    """Assign ranks, persist candidates to DB, and optionally log activity."""
+    candidates_col = get_candidates_collection()
+    for i, candidate in enumerate(candidates, start=1):
+        candidate["rank"] = i
+
+        candidate_doc = {
+            "candidate_name": candidate["name"],
+            "match_score": candidate["score"],
+            "job_title": job_title,
+            "status": "screening",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "semantic_score": candidate["semantic_score"],
+            "domain_skill_score": candidate["domain_skill_score"],
+            "matched_skills_count": candidate["matched_skills_count"],
+            "missing_skills_count": candidate["missing_skills_count"],
+            "matched_skills": candidate["matched_skills"],
+            "missing_skills": candidate["missing_skills"],
+            "skill_scores": candidate["skill_scores"],
+            "domain": candidate["domain"],
+            "filename": candidate["filename"]
+        }
+
+        result = candidates_col.insert_one(candidate_doc)
+        candidate["id"] = str(result.inserted_id)
+
+        if log_fn:
+            log_fn(candidate, job_title)
 
 
 @router.post("/hr/rank")
@@ -113,37 +225,16 @@ async def rank_candidates(
             await asyncio.sleep(0.01)  # Yield to event loop to prevent blocking
 
             file_bytes = await cv.read()
-            cv_text = extract_text(file_bytes, cv.filename)
-            candidate_name = extract_candidate_name(cv_text, cv.filename, file_bytes)
+            validate_upload_file(cv.filename, file_bytes)
+            safe_filename = sanitize_filename(cv.filename)
+            cv_text = extract_text(file_bytes, safe_filename)
+            candidate_name = extract_candidate_name(cv_text, safe_filename, file_bytes)
 
-            semantic_score = get_similarity_score(cv_text, jd_clean)
-
-            matched_skills, missing_skills, skill_scores = match_cv_jd_hybrid(
-                cv_text, jd_clean, domain, precomputed_target_skills=precomputed_target_skills
+            candidate = _process_single_candidate(
+                cv_text, cv.filename, jd_clean, domain,
+                precomputed_target_skills, candidate_name
             )
-
-            # Use Tito's compute_candidate_score formula
-            final_score, coverage_ratio, domain_relevance = compute_candidate_score(
-                semantic_score=semantic_score,
-                matched_skills=matched_skills,
-                missing_skills=missing_skills,
-                cv_text=cv_text,
-                domain=domain
-            )
-
-            candidates.append({
-                "name": candidate_name,
-                "score": final_score,
-                "semantic_score": semantic_score,
-                "domain_skill_score": coverage_ratio,
-                "matched_skills_count": len(matched_skills),
-                "missing_skills_count": len(missing_skills),
-                "matched_skills": matched_skills,
-                "missing_skills": missing_skills,
-                "skill_scores": skill_scores,
-                "domain": domain,
-                "filename": cv.filename
-            })
+            candidates.append(candidate)
 
         # Sort descending by score
         candidates.sort(
@@ -151,39 +242,10 @@ async def rank_candidates(
             reverse=True
         )
 
-        # Job title from job_description
-        first_line = job_description.strip().split('\n')[0].strip()
-        job_title = first_line[:100] if len(first_line) > 100 else first_line
-        if not job_title:
-            job_title = "Unknown Position"
+        job_title = _extract_job_title(job_description)
 
         # Add ranking and save to DB
-        candidates_col = get_candidates_collection()
-        for i, candidate in enumerate(
-            candidates,
-            start=1
-        ):
-            candidate["rank"] = i
-            
-            candidate_doc = {
-                "candidate_name": candidate["name"],
-                "match_score": candidate["score"],
-                "job_title": job_title,
-                "status": "screening",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "semantic_score": candidate["semantic_score"],
-                "domain_skill_score": candidate["domain_skill_score"],
-                "matched_skills_count": candidate["matched_skills_count"],
-                "missing_skills_count": candidate["missing_skills_count"],
-                "matched_skills": candidate["matched_skills"],
-                "missing_skills": candidate["missing_skills"],
-                "skill_scores": candidate["skill_scores"],
-                "domain": candidate["domain"],
-                "filename": candidate["filename"]
-            }
-            
-            result = candidates_col.insert_one(candidate_doc)
-            candidate["id"] = str(result.inserted_id)
+        _save_ranked_candidates(candidates, job_title)
 
         return candidates
 
@@ -216,32 +278,11 @@ def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_descrip
         candidates = []
         for cv_text, filename in parsed_cvs:
             candidate_name = extract_candidate_name(cv_text, filename)
-            semantic_score = get_similarity_score(cv_text, jd_clean)
-            matched_skills, missing_skills, skill_scores = match_cv_jd_hybrid(
-                cv_text, jd_clean, domain, precomputed_target_skills=precomputed_target_skills
+            candidate = _process_single_candidate(
+                cv_text, filename, jd_clean, domain,
+                precomputed_target_skills, candidate_name
             )
-
-            final_score, coverage_ratio, domain_relevance = compute_candidate_score(
-                semantic_score=semantic_score,
-                matched_skills=matched_skills,
-                missing_skills=missing_skills,
-                cv_text=cv_text,
-                domain=domain
-            )
-
-            candidates.append({
-                "name": candidate_name,
-                "score": final_score,
-                "semantic_score": semantic_score,
-                "domain_skill_score": coverage_ratio,
-                "matched_skills_count": len(matched_skills),
-                "missing_skills_count": len(missing_skills),
-                "matched_skills": matched_skills,
-                "missing_skills": missing_skills,
-                "skill_scores": skill_scores,
-                "domain": domain,
-                "filename": filename
-            })
+            candidates.append(candidate)
         time.sleep(0.3)
         
         progress_manager.update_progress(job_id, 50, "Embedding Generation")
@@ -250,41 +291,17 @@ def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_descrip
         progress_manager.update_progress(job_id, 75, "Ranking Candidates")
         candidates.sort(key=lambda x: x["score"], reverse=True)
         
-        # Job title from job_description
-        first_line = job_description.strip().split('\n')[0].strip()
-        job_title = first_line[:100] if len(first_line) > 100 else first_line
-        if not job_title:
-            job_title = "Unknown Position"
+        job_title = _extract_job_title(job_description)
 
-        candidates_col = get_candidates_collection()
-        for i, candidate in enumerate(candidates, start=1):
-            candidate["rank"] = i
-            
-            candidate_doc = {
-                "candidate_name": candidate["name"],
-                "match_score": candidate["score"],
-                "job_title": job_title,
-                "status": "screening",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "semantic_score": candidate["semantic_score"],
-                "domain_skill_score": candidate["domain_skill_score"],
-                "matched_skills_count": candidate["matched_skills_count"],
-                "missing_skills_count": candidate["missing_skills_count"],
-                "matched_skills": candidate["matched_skills"],
-                "missing_skills": candidate["missing_skills"],
-                "skill_scores": candidate["skill_scores"],
-                "domain": candidate["domain"],
-                "filename": candidate["filename"]
-            }
-            
-            result = candidates_col.insert_one(candidate_doc)
-            candidate["id"] = str(result.inserted_id)
+        def _log_candidate_activity(candidate, title):
             log_activity(
                 candidate_id=candidate["id"],
                 candidate_name=candidate["name"],
                 action="added",
-                details=f"Candidate added from Bulk CV Ranking for position: {job_title}"
+                details=f"Candidate added from Bulk CV Ranking for position: {title}"
             )
+
+        _save_ranked_candidates(candidates, job_title, log_fn=_log_candidate_activity)
 
         time.sleep(0.2)
         progress_manager.complete_job(job_id, candidates)
@@ -307,7 +324,9 @@ async def start_rank_candidates(
     for cv in cvs:
         await asyncio.sleep(0.01)
         file_bytes = await cv.read()
-        cv_files.append((file_bytes, cv.filename))
+        validate_upload_file(cv.filename, file_bytes)
+        safe_filename = sanitize_filename(cv.filename)
+        cv_files.append((file_bytes, safe_filename))
         
     job_id = progress_manager.create_job()
     background_tasks.add_task(
@@ -379,12 +398,12 @@ async def update_candidate_status(
     try:
         obj_id = ObjectId(id)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid candidate ID format")
+        raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail="Invalid candidate ID format")
         
     candidates_col = get_candidates_collection()
     candidate = candidates_col.find_one({"_id": obj_id})
     if not candidate:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Candidate not found")
         
     result = candidates_col.update_one(
         {"_id": obj_id},
@@ -449,12 +468,12 @@ async def schedule_candidate_interview(
     try:
         obj_id = ObjectId(id)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid candidate ID format")
+        raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail="Invalid candidate ID format")
         
     candidates_col = get_candidates_collection()
     candidate = candidates_col.find_one({"_id": obj_id, "status": "interview"})
     if not candidate:
-        raise HTTPException(status_code=404, detail="Candidate not found or status is not 'interview'")
+        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Candidate not found or status is not 'interview'")
         
     result = candidates_col.update_one(
         {"_id": obj_id, "status": "interview"},
@@ -486,12 +505,12 @@ async def generate_candidate_questions(
     try:
         obj_id = ObjectId(id)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid candidate ID format")
+        raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail="Invalid candidate ID format")
         
     candidates_col = get_candidates_collection()
     candidate = candidates_col.find_one({"_id": obj_id})
     if not candidate:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Candidate not found")
         
     matched_skills = candidate.get("matched_skills", [])
     missing_skills = candidate.get("missing_skills", [])

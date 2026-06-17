@@ -37,6 +37,14 @@ class MockCollection:
     def create_index(self, *args, **kwargs):
         pass
 
+    def update_one(self, query, update_dict):
+        user = self.find_one(query)
+        if user and "$set" in update_dict:
+            user.update(update_dict["$set"])
+        class UpdateResult:
+            modified_count = 1 if user else 0
+        return UpdateResult()
+
 @pytest.fixture
 def mock_db(monkeypatch):
     mock_coll = MockCollection()

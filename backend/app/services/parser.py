@@ -28,7 +28,7 @@ STOPWORDS = {
     "results-oriented", "proven", "track", "record", "excellent", "strong",
     "good", "success", "successful", "highly", "hardworking", "talented",
     "mencari", "termotivasi", "dinamis", "berorientasi", "hasil", "terbukti",
-    "baik", "sukses", "sangat", "berbakat", "kompeten", "professional", "responsible"
+    "baik", "sukses", "sangat", "berbakat", "kompeten", "professional", "responsible",
 
     # --- 5. SATUAN WAKTU & INFORMASI UMUM (Sering muncul di riwayat kerja) ---
     "years", "months", "year", "month",
@@ -147,8 +147,6 @@ def extract_candidate_name_from_pdf_bytes(file_bytes: bytes) -> str:
         for b in blocks:
             if b.get("type") == 0:  # text block
                 for l in b.get("lines", []):
-                    # We might want to combine spans in the same line if they have the same size
-                    # But for simplicity, we'll just check each span
                     line_text = ""
                     max_size = 0.0
                     for s in l.get("spans", []):
@@ -161,19 +159,25 @@ def extract_candidate_name_from_pdf_bytes(file_bytes: bytes) -> str:
                             
         if not text_spans: return ""
         
-        # Sort by size descending
+        # Sort by size descending (largest font = most likely the name)
         text_spans.sort(key=lambda x: x[0], reverse=True)
         
-        ignore_words = ["curriculum", "vitae", "resume", "cv", "profile", "portfolio", "contact", "about", "me"]
+        ignore_words = [
+            "curriculum", "vitae", "resume", "cv", "profile", "portfolio",
+            "contact", "about", "me", "summary", "objective", "experience",
+            "education", "skills", "personal", "information", "data diri",
+            "riwayat", "pengalaman", "pendidikan"
+        ]
         
         for size, text in text_spans:
-            text_lower = text.lower()
+            text_lower = text.lower().strip()
             if not any(w in text_lower for w in ignore_words):
-                # Clean it up
-                name = re.sub(r"[^a-zA-Z\s.]", "", text)
+                # Keep letters (including accented/unicode), dots, spaces, hyphens, and apostrophes
+                name = re.sub(r"[^a-zA-ZÀ-ÿ\s.\-']", "", text)
                 name = re.sub(r"\s+", " ", name).strip()
                 words = name.split()
-                if 1 <= len(words) <= 5:
+                # A name should have 1-6 words and at least 2 characters total
+                if 1 <= len(words) <= 6 and len(name) >= 2:
                     return name.title()
                     
     except ImportError:
@@ -190,29 +194,52 @@ def extract_candidate_name(text: str, filename: str, file_bytes: bytes = None) -
         if name_from_font:
             return name_from_font
 
-    # Fallback name from filename (remove extension and replace separators)
-    fallback_name = re.sub(r"\.[^.]+$", "", filename)
-    fallback_name = re.sub(r"[-_]", " ", fallback_name).title().strip()
-    
-    # Try regex matches
+    # 2. Try regex matches from text content (e.g. "Name: John Doe")
     name_patterns = [
-        r"(?i)name\s*:\s*([A-Za-z\s.]{2,50})",
-        r"(?i)full\s*name\s*:\s*([A-Za-z\s.]{2,50})",
-        r"(?i)nama\s*:\s*([A-Za-z\s.]{2,50})"
+        r"(?i)full\s*name\s*:\s*([A-Za-zÀ-ÿ\s.\-']{2,50})",
+        r"(?i)nama\s*lengkap\s*:\s*([A-Za-zÀ-ÿ\s.\-']{2,50})",
+        r"(?i)name\s*:\s*([A-Za-zÀ-ÿ\s.\-']{2,50})",
+        r"(?i)nama\s*:\s*([A-Za-zÀ-ÿ\s.\-']{2,50})"
     ]
     for pattern in name_patterns:
         match = re.search(pattern, text)
         if match:
             name = match.group(1).strip()
             name = re.sub(r"\s+", " ", name)
-            if len(name.split()) <= 4:
+            if 1 <= len(name.split()) <= 6:
                 return name.title()
                 
-    # Try first non-empty lines
+    # 3. Try first non-empty lines (heuristic: name is usually the first prominent line)
     lines = [line.strip() for line in text.split("\n") if line.strip()]
-    for line in lines[:3]:
-        # Clean from common CV words
-        if re.match(r"^[A-Za-z\s.]{2,30}$", line) and not any(w in line.lower() for w in ["curriculum", "vitae", "resume", "cv", "page", "contact", "profile"]):
-            return line.title()
+    skip_words = [
+        "curriculum", "vitae", "resume", "cv", "page", "contact", "profile",
+        "summary", "objective", "address", "phone", "email", "http", "www",
+        "linkedin", "@", "personal", "data diri", "riwayat"
+    ]
+    for line in lines[:5]:
+        line_lower = line.lower()
+        # Skip lines that look like headers, emails, URLs, or phone numbers
+        if any(w in line_lower for w in skip_words):
+            continue
+        if re.search(r"[\d@/]", line):
+            continue
+        # A name line: mostly letters, dots, hyphens, apostrophes, spaces (2-40 chars)
+        if re.match(r"^[A-Za-zÀ-ÿ\s.\-']{2,40}$", line):
+            words = line.split()
+            if 1 <= len(words) <= 6:
+                return line.title()
             
-    return fallback_name
+    # 4. Fallback: derive name from filename (remove extension and clean separators)
+    fallback_name = re.sub(r"\.[^.]+$", "", filename)
+    # Remove common prefixes like "CV", "Resume", "CV -", etc.
+    fallback_name = re.sub(r"(?i)^(cv|resume|curriculum\s*vitae)\s*[-_.\s]*", "", fallback_name)
+    fallback_name = re.sub(r"[-_]", " ", fallback_name)
+    # Remove trailing noise like "(1)", "(2)", "copy", "final"
+    fallback_name = re.sub(r"\s*\(?\d+\)?\s*$", "", fallback_name)
+    fallback_name = re.sub(r"\s*(copy|final|rev|v\d+)\s*$", "", fallback_name, flags=re.IGNORECASE)
+    fallback_name = re.sub(r"\s+", " ", fallback_name).strip()
+    
+    if fallback_name:
+        return fallback_name.title()
+    
+    return "Unknown Candidate"

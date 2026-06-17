@@ -2,9 +2,9 @@
   <div class="auth-container">
     <div class="auth-card glass-panel">
       <div class="auth-header">
-        <img class="auth-logo" src="/icon.svg" alt="CV Matcher Pro logo" />
+        <img class="auth-logo" src="/hirezy-logo.png" alt="HIREZY logo" />
         <h2>Create Account</h2>
-        <p class="subtitle">Join CV Matcher Pro to start screening or analyzing CVs</p>
+        <p class="subtitle">Join HIREZY to start screening or analyzing CVs</p>
       </div>
 
       <form @submit.prevent="handleRegister" class="auth-form">

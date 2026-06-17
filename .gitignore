@@ -17,5 +17,7 @@ venv
 .env
 mlruns/
 reports/
-backend/data/
-data/evaluation/
+
+# Ignore entire data and docs directories
+data/
+docs/

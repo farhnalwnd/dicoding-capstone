@@ -8,7 +8,7 @@
           Admin Control Center
         </span>
         <h2>Platform Overview</h2>
-        <p class="header-sub">Smart Recruit AI — Full system visibility and control.</p>
+        <p class="header-sub">HIREZY — Full system visibility and control.</p>
       </div>
       <div class="admin-header-right">
         <span class="admin-time">{{ currentTime }}</span>
