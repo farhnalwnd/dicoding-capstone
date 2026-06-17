@@ -1,0 +1,34 @@
+{
+  "domain": "CS & Aftersales",
+  "threshold_direct_match": 0.70,
+  "threshold_master_match": 0.72,
+  "skills": [
+    "Customer Service", "Aftersales Support", "Call Center Operations",
+    "Complaint Resolution", "Technical Support", "Customer Experience",
+    "CRM Tools", "Zendesk", "Live Chat Support", "Customer Satisfaction",
+    "Product Knowledge", "Ticket Resolution", "Empathy", "Active Listening"
+  ],
+  "roles": [
+    "Customer Service Manager", "CS Representative", "Technical Support Specialist",
+    "Aftersales Coordinator", "Call Center Agent"
+  ],
+  "teams": [
+    "Customer Service", "Aftersales", "Call Center", "Support Operations"
+  ],
+  "projects": [
+    "customer support ticketing system", "call center workflow optimization",
+    "product warranty tracking system", "customer feedback analysis",
+    "aftersales service automation", "customer satisfaction survey"
+  ],
+  "unrelated_industries": ["Heavy Manufacturing", "Oil & Gas", "Mining", "Construction"],
+  "unrelated_roles": ["Backend Developer", "Financial Analyst", "Legal Counsel", "Mechanical Engineer"],
+  "unrelated_tools": ["Docker", "Kubernetes", "SQL", "Python", "MATLAB"],
+  "experience_keywords": [
+    "years of customer service experience", "pengalaman customer service",
+    "aftersales experience", "pengalaman aftersales"
+  ],
+  "education_keywords": [
+    "bachelor", "degree", "sarjana", "diploma", "any major",
+    "communication", "ilmu komunikasi"
+  ]
+}

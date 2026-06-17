@@ -1,0 +1,42 @@
+{
+  "domain": "IT",
+  "threshold_direct_match": 0.80,
+  "threshold_master_match": 0.82,
+  "skills": [
+    "Python", "JavaScript", "TypeScript", "Vue.js", "React", "Angular",
+    "Node.js", "FastAPI", "Flask", "Django", "Docker", "Kubernetes",
+    "SQL", "PostgreSQL", "MySQL", "MongoDB", "Git", "NLP",
+    "Machine Learning", "Deep Learning", "AWS", "GCP", "Azure",
+    "Tailwind CSS", "HTML", "CSS", "Java", "C++", "C#", "Linux",
+    "Bash", "REST API", "GraphQL", "TensorFlow", "PyTorch",
+    "Scikit-Learn", "Pandas", "NumPy", "Apache Spark", "Hadoop",
+    "Kafka", "RabbitMQ", "Redis", "Elasticsearch", "CI/CD",
+    "Jenkins", "Terraform", "Ansible", "Agile", "Scrum",
+    "Next.js", "Express.js", "Pytest"
+  ],
+  "roles": [
+    "Backend Engineer", "Frontend Developer", "DevOps Engineer",
+    "Data Scientist", "Fullstack Developer", "ML Engineer", "Software Architect"
+  ],
+  "teams": [
+    "Engineering", "Data Science", "DevOps", "Infrastructure", "Product Development"
+  ],
+  "projects": [
+    "REST API development", "microservice architecture", "CI/CD pipeline setup",
+    "database migration", "cloud infrastructure deployment", "web application",
+    "mobile app backend", "data pipeline", "machine learning model deployment",
+    "automated testing framework"
+  ],
+  "unrelated_industries": ["Farming", "Mining", "Hospitality", "Retail", "Agriculture"],
+  "unrelated_roles": ["Sales Manager", "HR Recruiter", "Graphic Designer", "Marketing Specialist", "Accountant"],
+  "unrelated_tools": ["Photoshop", "Excel Macros", "AutoCAD", "Figma", "Video Editor"],
+  "experience_keywords": [
+    "years of experience", "pengalaman tahun", "previously worked",
+    "sebelumnya bekerja", "software development", "pengembangan perangkat lunak"
+  ],
+  "education_keywords": [
+    "bachelor", "master", "degree", "sarjana", "magister",
+    "university", "universitas", "computer science", "informatika",
+    "teknik informatika", "sistem informasi"
+  ]
+}

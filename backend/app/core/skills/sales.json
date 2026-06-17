@@ -1,0 +1,35 @@
+{
+  "domain": "Sales & Business Development",
+  "threshold_direct_match": 0.70,
+  "threshold_master_match": 0.72,
+  "skills": [
+    "Sales", "Business Development", "Account Management",
+    "Client Relationship Management", "Negotiation", "Closing",
+    "Pipeline Management", "CRM", "Salesforce", "Lead Generation",
+    "Prospecting", "Territory Management", "Revenue Growth",
+    "Strategic Planning", "Market Analysis", "B2B", "B2C"
+  ],
+  "roles": [
+    "Sales Manager", "Account Executive", "Business Development Manager",
+    "Sales Representative", "Key Account Manager"
+  ],
+  "teams": [
+    "Sales", "Business Development", "Account Management", "Commercial"
+  ],
+  "projects": [
+    "B2B expansion strategy", "CRM migration project", "sales territory restructuring",
+    "major account acquisition", "sales pipeline optimization",
+    "partnership development program"
+  ],
+  "unrelated_industries": ["Heavy Manufacturing", "R&D Labs", "Agriculture", "Government Auditing"],
+  "unrelated_roles": ["DevOps Engineer", "Legal Assistant", "Tax Accountant", "Factory Operator"],
+  "unrelated_tools": ["Docker", "AutoCAD", "MATLAB", "GitLab", "Jenkins"],
+  "experience_keywords": [
+    "years of sales experience", "pengalaman penjualan",
+    "sales achievement", "pencapaian penjualan"
+  ],
+  "education_keywords": [
+    "bachelor", "degree", "sarjana",
+    "business administration", "management", "administrasi bisnis"
+  ]
+}

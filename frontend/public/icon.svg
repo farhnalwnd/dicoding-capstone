@@ -1,0 +1,51 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">HIREZY App Icon</title>
+  <desc id="desc">A modern resume matching icon with a CV document, AI connection nodes, magnifying glass, and checkmark.</desc>
+  <defs>
+    <linearGradient id="g-main" x1="112" y1="90" x2="402" y2="410" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B63F6"/>
+      <stop offset="0.52" stop-color="#1199F4"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="g-soft" x1="98" y1="82" x2="430" y2="438" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EEF8FF"/>
+      <stop offset="1" stop-color="#F8FDFF"/>
+    </linearGradient>
+    <filter id="shadow" x="46" y="50" width="420" height="420" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#0B63F6" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect x="40" y="40" width="432" height="432" rx="116" fill="url(#g-soft)"/>
+  <rect x="42" y="42" width="428" height="428" rx="114" stroke="#D7ECFF" stroke-width="4"/>
+
+  <g filter="url(#shadow)">
+    <!-- Document outline -->
+    <path d="M128 112C128 94.33 142.33 80 160 80H314L392 158V352C392 369.67 377.67 384 360 384H160C142.33 384 128 369.67 128 352V112Z" fill="white"/>
+    <path d="M160 80H314L392 158V352C392 369.67 377.67 384 360 384H160C142.33 384 128 369.67 128 352V112C128 94.33 142.33 80 160 80Z" stroke="url(#g-main)" stroke-width="18" stroke-linejoin="round"/>
+    <path d="M314 80V142C314 150.84 321.16 158 330 158H392" fill="#DDF7FF" stroke="url(#g-main)" stroke-width="18" stroke-linejoin="round"/>
+
+    <!-- AI nodes -->
+    <path d="M392 184H430L456 158" stroke="url(#g-main)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M392 226H438L463 226" stroke="url(#g-main)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M392 268H430L456 294" stroke="url(#g-main)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="461" cy="153" r="16" fill="white" stroke="#17C7E8" stroke-width="10"/>
+    <circle cx="469" cy="226" r="16" fill="white" stroke="#17C7E8" stroke-width="10"/>
+    <circle cx="461" cy="299" r="16" fill="white" stroke="#17C7E8" stroke-width="10"/>
+
+    <!-- Profile and resume lines -->
+    <circle cx="206" cy="158" r="27" fill="url(#g-main)"/>
+    <path d="M160 237C160 211.04 181.04 190 207 190C232.96 190 254 211.04 254 237V244H160V237Z" fill="url(#g-main)"/>
+    <rect x="276" y="146" width="72" height="18" rx="9" fill="#B7C9EF"/>
+    <rect x="276" y="184" width="58" height="18" rx="9" fill="#B7C9EF"/>
+    <circle cx="166" cy="282" r="11" fill="#0B63F6"/>
+    <rect x="194" y="271" width="126" height="18" rx="9" fill="#B7C9EF"/>
+    <circle cx="166" cy="324" r="11" fill="#0B63F6"/>
+    <rect x="194" y="313" width="96" height="18" rx="9" fill="#B7C9EF"/>
+
+    <!-- Magnifier -->
+    <circle cx="326" cy="322" r="73" fill="white" stroke="url(#g-main)" stroke-width="22"/>
+    <path d="M374 374L428 428" stroke="#0B63F6" stroke-width="28" stroke-linecap="round"/>
+    <path d="M288 319L316 347L366 294" stroke="#0B63F6" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

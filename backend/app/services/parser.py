@@ -4,37 +4,104 @@ from pypdf import PdfReader
 from docx import Document
 
 STOPWORDS = {
-    # English Stopwords + Generic
+    # --- 1. PREPOSISI & KATA HUBUNG STANDARD (English) ---
     "that", "this", "these", "those", "the", "a", "an", "and", "or", "but",
     "for", "with", "from", "into", "through", "during", "before", "after",
-    "above", "below", "between", "various", "many", "some", "any", "each",
-    "every", "both", "few", "more", "most", "other", "another", "such",
-    "degree", "years", "work", "team", "experience", "skill", "ability",
-    "understanding", "knowledge", "working", "strong", "good", "excellent",
-    "basic", "proficient", "familiar", "proven", "demonstrated", "required",
-    "preferred", "plus", "bonus", "role", "job", "position", "candidate",
-    "looking", "seeking", "join", "help", "build", "create", "make", "using",
-    "used", "based", "related", "similar", "equivalent", "including",
+    "above", "below", "between", "of", "to", "in", "on", "at", "by", "as",
+    "job", "description", "requirement", "requirements",
     
-    # Indonesian Stopwords
+    # --- 2. PREPOSISI & KATA HUBUNG STANDARD (Indonesian) ---
     "yang", "dan", "di", "ke", "dari", "pada", "dengan", "untuk", "dalam",
     "adalah", "sebagai", "telah", "akan", "dapat", "tidak", "ini", "itu",
     "juga", "atau", "oleh", "seperti", "sehingga", "serta", "saat", "bagi",
-    "kemudian", "namun", "karena", "bisa", "harus", "banyak", "beberapa",
-    "tahun", "pengalaman", "kemampuan", "keahlian", "pemahaman", "bekerja",
-    "baik", "kuat", "dasar", "terbukti", "dibutuhkan", "diutamakan", "nilai",
-    "tambah", "peran", "pekerjaan", "posisi", "kandidat", "mencari", "bergabung",
-    "membantu", "membangun", "membuat", "menggunakan", "berbasis", "terkait",
-    "serupa", "setara", "termasuk"
+    "kemudian", "namun", "karena", "bisa", "harus", "ia", "kami", "saya",
+    "deskripsi",
+
+    # --- 3. CV ARTIFACTS & HEADERS (Kata bawaan template dokumen) ---
+    "requirements", "description", "curriculum", "vitae", "resume", "page", 
+    "summary", "profile", "contact", "about", "me", "biodata", "personal",
+    "deskripsi", "persyaratan", "profil", "ringkasan", "tentang", "saya",
+    "halaman", "detail", "details", "information", "informasi",
+
+    # --- 4. CORPORATE CLICHES & BUZZWORDS (Pemanis kalimat yang tidak bernilai) ---
+    "seeking", "looking", "forward", "passionate", "motivated", "dynamic",
+    "results-oriented", "proven", "track", "record", "excellent", "strong",
+    "good", "success", "successful", "highly", "hardworking", "talented",
+    "mencari", "termotivasi", "dinamis", "berorientasi", "hasil", "terbukti",
+    "baik", "sukses", "sangat", "berbakat", "kompeten", "professional", "responsible",
+
+    # --- 5. SATUAN WAKTU & INFORMASI UMUM (Sering muncul di riwayat kerja) ---
+    "years", "months", "year", "month",
+    "tahun", "bulan", "penuh", "waktu", "magang", "kontrak", "contract",
+    "january", "february", "march", "april", "may", "june", "july", "august", 
+    "september", "october", "november", "december", "present", "current",
+    "sekarang", "saat", "ini",
+
+    # --- 6. ACTION VERBS / KATA KERJA UMUM (Bukan skill) ---
+    "have", "must", "can", "able", "will", "shall", "may", "being",
+    "ensure", "assist", "contribute", "comply", "perform", "make", "do",
+    "manage", "handle", "support", "provide", "create", "develop",
+    "berhasil", "membantu", "mengelola", "menangani", "melakukan", "membuat",
+    "menggunakan", "menjadi", "memiliki", "serta", "termasuk",
+
+    # --- 7. RECRUITMENT NOUNS (Kata bawaan lowongan kerja, bukan skill) ---
+    "skill", "skills", "knowledge", "bachelor", "degree", "science",
+    "proficiency", "proficient", "basic", "fluent", "written", "verbal",
+    "english", "indonesia", "communication", "interpersonal",
+    "keren", "lulusan", "sarjana", "pengetahuan", "komunikasi",
+
+    # --- 8. KATA KERJA & KATA BENDA GENERIK (Bukan skill spesifik) ---
+    "work", "working", "experience", "experienced", "experience",
+    "team", "company", "position", "candidate", "applicants",
+    "role", "opportunity", "responsibilities", "duties", "tasks",
+    "pengalaman", "pengalaman kerja", "posisi", "kandidat",
+
+    # --- 9. GEOGRAFIS / LOKASI (Bukan skill) ---
+    "indonesia", "medan", "bekasi", "pangandaran", "banten",
+    "jakarta", "bandung", "surabaya", "tangerang", "depok",
+    "bogor", "semarang", "yogyakarta", "makassar", "bali",
+    "manado", "palembang", "padang", "lampung", "aceh",
+    "sumatera", "kalimantan", "sulawesi", "jawa", "ntt", "ntb",
+
+    # --- 10. KATA GENERIK LAINNYA (Kata yang sering salah dianggap skill) ---
+    "what", "within", "well", "also", "such", "like", "other",
+    "more", "all", "any", "each", "every", "both", "few", "own",
+    "new", "first", "last", "long", "great", "little", "only",
+    "over", "here", "there", "where", "when", "how", "why",
+    "berikut", "berikut", "tersebut", "lainnya", "serta",
+    "solusi", "sistem", "solutions", "system", "systems",
+    "reporting", "presentation", "design",
+    "terkait", "khusus", "umum", "lain", "lebih",
+    "e.g.", "e.g", "eg", "i.e.", "i.e", "ie", "etc", "dll", "dsb", "wfo", "wfh",
+    "database", "databases", "server", "servers", "js", "web", "app", "application",
+    "applications", "framework", "library", "tool", "tools", "platform", "platforms",
+    "data", "programming", "code", "coding", "software", "hardware", "project", "projects",
 }
 
 def clean_text(text: str) -> str:
-    """Clean extracted text from noise, excess whitespaces, and common artifacts"""
-    # Remove non-alphanumeric characters except basic punctuation
-    text = re.sub(r'[^\w\s.,;:()\-+/#]', ' ', text)
-    # Remove multiple spaces/newlines
+    """Clean extracted text from noise, excess whitespaces, HTML tags, and common artifacts while preserving case"""
+    if not text:
+        return ""
+        
+    # 1. Hapus tag HTML jika ada (terutama untuk JD hasil scrape)
+    text = re.sub(r'<[^>]*>', ' ', text)
+
+    # 3. Hapus URL/Links
+    text = re.sub(r'https?://\S+|www\.\S+', ' ', text)
+    
+    # 4. Hapus Email
+    text = re.sub(r'\S+@\S+', ' ', text)
+    
+    # 5. Hapus Nomor Telepon
+    text = re.sub(r'\+?\d[\d -]{8,15}\d', ' ', text)
+
+    # 6. Hilangkan karakter tidak perlu kecuali tanda baca dasar dan simbol teknologi (+, #, -, /)
+    text = re.sub(r'[^\w\s.,;:\-+/#]', ' ', text)
+    
+    # 7. Bersihkan spasi/newline berlebih
     text = re.sub(r'\s+', ' ', text)
-    # Remove common CV headers/footers
+    
+    # 8. Hilangkan header/footer umum CV (case-insensitive)
     noise_patterns = [
         r'(?i)page\s+\d+\s+of\s+\d+',
         r'(?i)curriculum\s+vitae',
@@ -42,6 +109,7 @@ def clean_text(text: str) -> str:
     ]
     for pattern in noise_patterns:
         text = re.sub(pattern, ' ', text)
+        
     return text.strip()
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -66,30 +134,112 @@ def extract_text(file_bytes: bytes, filename: str) -> str:
         return extract_text_from_docx(file_bytes)
     return clean_text(file_bytes.decode("utf-8", errors="ignore"))
 
-def extract_candidate_name(text: str, filename: str) -> str:
-    # Fallback name from filename (remove extension and replace separators)
-    fallback_name = re.sub(r"\.[^.]+$", "", filename)
-    fallback_name = re.sub(r"[-_]", " ", fallback_name).title().strip()
-    
-    # Try regex matches
+def extract_candidate_name_from_pdf_bytes(file_bytes: bytes) -> str:
+    try:
+        import fitz
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        if len(doc) == 0: return ""
+        
+        page = doc[0]
+        blocks = page.get_text("dict").get("blocks", [])
+        
+        text_spans = []
+        for b in blocks:
+            if b.get("type") == 0:  # text block
+                for l in b.get("lines", []):
+                    line_text = ""
+                    max_size = 0.0
+                    for s in l.get("spans", []):
+                        line_text += s.get("text", "") + " "
+                        max_size = max(max_size, s.get("size", 0.0))
+                    
+                    line_text = line_text.strip()
+                    if len(line_text) > 2 and re.search(r'[A-Za-z]', line_text):
+                        text_spans.append((max_size, line_text))
+                            
+        if not text_spans: return ""
+        
+        # Sort by size descending (largest font = most likely the name)
+        text_spans.sort(key=lambda x: x[0], reverse=True)
+        
+        ignore_words = [
+            "curriculum", "vitae", "resume", "cv", "profile", "portfolio",
+            "contact", "about", "me", "summary", "objective", "experience",
+            "education", "skills", "personal", "information", "data diri",
+            "riwayat", "pengalaman", "pendidikan"
+        ]
+        
+        for size, text in text_spans:
+            text_lower = text.lower().strip()
+            if not any(w in text_lower for w in ignore_words):
+                # Keep letters (including accented/unicode), dots, spaces, hyphens, and apostrophes
+                name = re.sub(r"[^a-zA-ZÀ-ÿ\s.\-']", "", text)
+                name = re.sub(r"\s+", " ", name).strip()
+                words = name.split()
+                # A name should have 1-6 words and at least 2 characters total
+                if 1 <= len(words) <= 6 and len(name) >= 2:
+                    return name.title()
+                    
+    except ImportError:
+        print("PyMuPDF (fitz) is not installed. Falling back to regex name extraction.")
+    except Exception as e:
+        print(f"Error extracting name from PDF fonts: {e}")
+        
+    return ""
+
+def extract_candidate_name(text: str, filename: str, file_bytes: bytes = None) -> str:
+    # 1. Try Font Size extraction if it's a PDF and bytes are provided
+    if file_bytes and filename.lower().endswith(".pdf"):
+        name_from_font = extract_candidate_name_from_pdf_bytes(file_bytes)
+        if name_from_font:
+            return name_from_font
+
+    # 2. Try regex matches from text content (e.g. "Name: John Doe")
     name_patterns = [
-        r"(?i)name\s*:\s*([A-Za-z\s.]{2,50})",
-        r"(?i)full\s*name\s*:\s*([A-Za-z\s.]{2,50})",
-        r"(?i)nama\s*:\s*([A-Za-z\s.]{2,50})"
+        r"(?i)full\s*name\s*:\s*([A-Za-zÀ-ÿ\s.\-']{2,50})",
+        r"(?i)nama\s*lengkap\s*:\s*([A-Za-zÀ-ÿ\s.\-']{2,50})",
+        r"(?i)name\s*:\s*([A-Za-zÀ-ÿ\s.\-']{2,50})",
+        r"(?i)nama\s*:\s*([A-Za-zÀ-ÿ\s.\-']{2,50})"
     ]
     for pattern in name_patterns:
         match = re.search(pattern, text)
         if match:
             name = match.group(1).strip()
             name = re.sub(r"\s+", " ", name)
-            if len(name.split()) <= 4:
+            if 1 <= len(name.split()) <= 6:
                 return name.title()
                 
-    # Try first non-empty lines
+    # 3. Try first non-empty lines (heuristic: name is usually the first prominent line)
     lines = [line.strip() for line in text.split("\n") if line.strip()]
-    for line in lines[:3]:
-        # Clean from common CV words
-        if re.match(r"^[A-Za-z\s.]{2,30}$", line) and not any(w in line.lower() for w in ["curriculum", "vitae", "resume", "cv", "page", "contact", "profile"]):
-            return line.title()
+    skip_words = [
+        "curriculum", "vitae", "resume", "cv", "page", "contact", "profile",
+        "summary", "objective", "address", "phone", "email", "http", "www",
+        "linkedin", "@", "personal", "data diri", "riwayat"
+    ]
+    for line in lines[:5]:
+        line_lower = line.lower()
+        # Skip lines that look like headers, emails, URLs, or phone numbers
+        if any(w in line_lower for w in skip_words):
+            continue
+        if re.search(r"[\d@/]", line):
+            continue
+        # A name line: mostly letters, dots, hyphens, apostrophes, spaces (2-40 chars)
+        if re.match(r"^[A-Za-zÀ-ÿ\s.\-']{2,40}$", line):
+            words = line.split()
+            if 1 <= len(words) <= 6:
+                return line.title()
             
-    return fallback_name
+    # 4. Fallback: derive name from filename (remove extension and clean separators)
+    fallback_name = re.sub(r"\.[^.]+$", "", filename)
+    # Remove common prefixes like "CV", "Resume", "CV -", etc.
+    fallback_name = re.sub(r"(?i)^(cv|resume|curriculum\s*vitae)\s*[-_.\s]*", "", fallback_name)
+    fallback_name = re.sub(r"[-_]", " ", fallback_name)
+    # Remove trailing noise like "(1)", "(2)", "copy", "final"
+    fallback_name = re.sub(r"\s*\(?\d+\)?\s*$", "", fallback_name)
+    fallback_name = re.sub(r"\s*(copy|final|rev|v\d+)\s*$", "", fallback_name, flags=re.IGNORECASE)
+    fallback_name = re.sub(r"\s+", " ", fallback_name).strip()
+    
+    if fallback_name:
+        return fallback_name.title()
+    
+    return "Unknown Candidate"

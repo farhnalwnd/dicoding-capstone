@@ -1,4 +1,23 @@
 .opencode/
 *.md
 !README.md
+!FINETUNING_GUIDE.md
+# !ISSUE.md
+# !BUG.md
+!FLOW.md
+!AGENT.md
+**/__pycache__/
+data/training/*.csv
+models/bi-encoder-cv-matcher/**/*
+models/cross-encoder-cv-matcher/**/*
+.venv/
+.venv
+venv/
+venv
 .env
+mlruns/
+reports/
+
+# Ignore entire data and docs directories
+data/
+docs/

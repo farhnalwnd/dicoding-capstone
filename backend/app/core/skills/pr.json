@@ -1,0 +1,35 @@
+{
+  "domain": "PR & Corcom",
+  "threshold_direct_match": 0.72,
+  "threshold_master_match": 0.74,
+  "skills": [
+    "Public Relations", "Corporate Communication", "Media Relations",
+    "Press Release", "Crisis Management", "Internal Communication",
+    "Brand Management", "Event Management", "Speechwriting",
+    "Social Media", "Stakeholder Engagement", "Copywriting"
+  ],
+  "roles": [
+    "PR Manager", "Corporate Communication Lead", "Media Relations Officer",
+    "Spokesperson", "Event Coordinator"
+  ],
+  "teams": [
+    "Public Relations", "Corporate Communication", "Media Relations", "Brand Management"
+  ],
+  "projects": [
+    "press conference organization", "crisis communication plan",
+    "media campaign launch", "internal newsletter redesign",
+    "brand repositioning campaign", "stakeholder event coordination"
+  ],
+  "unrelated_industries": ["Manufacturing", "Oil & Gas", "Construction", "Agriculture"],
+  "unrelated_roles": ["Software Developer", "Data Analyst", "Mechanical Engineer", "Tax Accountant"],
+  "unrelated_tools": ["Docker", "Python", "SQL", "CAD", "MATLAB"],
+  "experience_keywords": [
+    "years of PR experience", "pengalaman hubungan masyarakat",
+    "corcom experience", "pengalaman komunikasi korporat"
+  ],
+  "education_keywords": [
+    "bachelor", "degree", "sarjana",
+    "communication", "public relations", "hubungan masyarakat",
+    "ilmu komunikasi"
+  ]
+}
