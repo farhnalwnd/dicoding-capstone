@@ -20,7 +20,9 @@ from app.core.mongodb import get_users_collection
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 if not SECRET_KEY:
-    raise RuntimeError("JWT_SECRET_KEY environment variable is required. Set it before starting the server.")
+    raise RuntimeError(
+        "JWT_SECRET_KEY environment variable is required. Set it before starting the server."
+    )
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
 
@@ -45,10 +47,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # JWT Token
 # ====================================
 
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create a JWT access token with the given data payload."""
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -121,6 +126,7 @@ def require_role(*allowed_roles: str):
     FastAPI dependency factory for Role-Based Access Control.
     Usage: Depends(require_role("hr")) or Depends(require_role("hr", "jobseeker"))
     """
+
     async def role_checker(current_user: dict = Depends(get_current_user)):
         if current_user["role"] not in allowed_roles:
             raise HTTPException(
@@ -128,4 +134,5 @@ def require_role(*allowed_roles: str):
                 detail=f"Access denied. Required role: {', '.join(allowed_roles)}",
             )
         return current_user
+
     return role_checker

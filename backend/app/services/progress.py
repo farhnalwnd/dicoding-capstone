@@ -13,11 +13,13 @@ class JobProgressManager:
             "progress": 0,
             "message": "Initializing pipeline",
             "status": "processing",
-            "result": None
+            "result": None,
         }
         return job_id
 
-    def update_progress(self, job_id: str, progress: int, message: str, status: str = "processing"):
+    def update_progress(
+        self, job_id: str, progress: int, message: str, status: str = "processing"
+    ):
         if job_id in self._jobs:
             self._jobs[job_id]["progress"] = progress
             self._jobs[job_id]["message"] = message

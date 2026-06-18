@@ -18,7 +18,7 @@ ACTION_LABEL_MAP = {
     "interview": "Interview Transfers",
     "interview_scheduled": "Interview Scheduled",
     "hired": "Hiring Decisions",
-    "rejected": "Rejection Decisions"
+    "rejected": "Rejection Decisions",
 }
 
 
@@ -29,12 +29,18 @@ def parse_iso_date(date_str: str) -> Optional[datetime]:
     except Exception:
         try:
             # Fallback for date-only formats YYYY-MM-DD
-            return datetime.strptime(date_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            return datetime.strptime(date_str[:10], "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
         except Exception:
             return None
 
 
-def build_filter_query(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> Dict[str, Any]:  # noqa: E501
+def build_filter_query(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    domain: Optional[str] = None,
+) -> Dict[str, Any]:  # noqa: E501
     query = {}
 
     # Domain filter
@@ -60,7 +66,7 @@ def _build_period_query(
     period_start: str,
     period_end: str,
     fallback_gte: str,
-    use_lt: bool = False
+    use_lt: bool = False,
 ) -> Dict[str, Any]:
     """Build a date-filtered query for a specific time period."""
     q = query_base.copy()
@@ -70,9 +76,15 @@ def _build_period_query(
     if "created_at" in q and isinstance(q["created_at"], dict):
         existing_gte = q["created_at"].get("$gte", fallback_gte)
         if use_lt:
-            q["created_at"] = {"$gte": max(existing_gte, period_start), "$lt": period_end}
+            q["created_at"] = {
+                "$gte": max(existing_gte, period_start),
+                "$lt": period_end,
+            }
         else:
-            q["created_at"] = {"$gte": max(existing_gte, period_start), "$lte": period_end}
+            q["created_at"] = {
+                "$gte": max(existing_gte, period_start),
+                "$lte": period_end,
+            }
     else:
         if use_lt:
             q["created_at"] = {"$gte": period_start, "$lt": period_end}
@@ -93,7 +105,7 @@ def _format_trend_percentage(curr_count: int, prev_count: int) -> str:
     if prev_count == 0:
         if curr_count == 0:
             return "0%"
-        return "New"   # First time data appears — cleaner than +∞%
+        return "New"  # First time data appears — cleaner than +∞%
 
     diff_pct = int(((curr_count - prev_count) / prev_count) * PERCENTAGE_MULTIPLIER)
 
@@ -116,7 +128,12 @@ def calculate_trend(status: str, query_base: Dict[str, Any]) -> str:
         query_base, status, seven_days_ago, now.isoformat(), fourteen_days_ago
     )
     q_prev = _build_period_query(
-        query_base, status, fourteen_days_ago, seven_days_ago, fourteen_days_ago, use_lt=True
+        query_base,
+        status,
+        fourteen_days_ago,
+        seven_days_ago,
+        fourteen_days_ago,
+        use_lt=True,
     )
 
     try:
@@ -128,7 +145,11 @@ def calculate_trend(status: str, query_base: Dict[str, Any]) -> str:
     return _format_trend_percentage(curr_count, prev_count)
 
 
-def get_recruitment_stats(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> Dict[str, Any]:  # noqa: E501
+def get_recruitment_stats(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    domain: Optional[str] = None,
+) -> Dict[str, Any]:  # noqa: E501
     candidates_col = get_candidates_collection()
     query = build_filter_query(start_date, end_date, domain)
 
@@ -145,7 +166,11 @@ def get_recruitment_stats(start_date: Optional[str] = None, end_date: Optional[s
         trends[s] = calculate_trend(s, query)
 
     # Calculate score metrics across filtered candidates
-    scores = [c["match_score"] for c in candidates_col.find(query, {"match_score": 1}) if "match_score" in c]
+    scores = [
+        c["match_score"]
+        for c in candidates_col.find(query, {"match_score": 1})
+        if "match_score" in c
+    ]
     avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
     highest_score = round(max(scores), 1) if scores else 0.0
     lowest_score = round(min(scores), 1) if scores else 0.0
@@ -157,7 +182,7 @@ def get_recruitment_stats(start_date: Optional[str] = None, end_date: Optional[s
             "talent_pool": stats_data["talent_pool"],
             "interview": stats_data["interview"],
             "hired": stats_data["hired"],
-            "rejected": stats_data["rejected"]
+            "rejected": stats_data["rejected"],
         },
         "trends": {
             "total_candidates": trends["total"],
@@ -165,17 +190,21 @@ def get_recruitment_stats(start_date: Optional[str] = None, end_date: Optional[s
             "talent_pool": trends["talent_pool"],
             "interview": trends["interview"],
             "hired": trends["hired"],
-            "rejected": trends["rejected"]
+            "rejected": trends["rejected"],
         },
         "scores": {
             "average": avg_score,
             "highest": highest_score,
-            "lowest": lowest_score
-        }
+            "lowest": lowest_score,
+        },
     }
 
 
-def get_candidate_funnel(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:  # noqa: E501
+def get_candidate_funnel(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    domain: Optional[str] = None,
+) -> List[Dict[str, Any]]:  # noqa: E501
     candidates_col = get_candidates_collection()
     query = build_filter_query(start_date, end_date, domain)
 
@@ -190,7 +219,9 @@ def get_candidate_funnel(start_date: Optional[str] = None, end_date: Optional[st
     applicants = candidates_col.count_documents(q_all)
 
     q_screening = query.copy()
-    q_screening["status"] = {"$in": ["screening", "talent_pool", "interview", "hired", "rejected"]}
+    q_screening["status"] = {
+        "$in": ["screening", "talent_pool", "interview", "hired", "rejected"]
+    }
     screening = candidates_col.count_documents(q_screening)
 
     q_tp = query.copy()
@@ -207,18 +238,42 @@ def get_candidate_funnel(start_date: Optional[str] = None, end_date: Optional[st
 
     return [
         {"stage": "Applicants", "count": applicants, "percentage": 100.0},
-        {"stage": "Screening", "count": screening, "percentage": round(
-            (screening / applicants * 100), 1) if applicants > 0 else 0.0},
-        {"stage": "Talent Pool", "count": talent_pool, "percentage": round(
-            (talent_pool / applicants * 100), 1) if applicants > 0 else 0.0},
-        {"stage": "Interview", "count": interview, "percentage": round(
-            (interview / applicants * 100), 1) if applicants > 0 else 0.0},
-        {"stage": "Hired", "count": hired, "percentage": round(
-            (hired / applicants * 100), 1) if applicants > 0 else 0.0}
+        {
+            "stage": "Screening",
+            "count": screening,
+            "percentage": round((screening / applicants * 100), 1)
+            if applicants > 0
+            else 0.0,
+        },
+        {
+            "stage": "Talent Pool",
+            "count": talent_pool,
+            "percentage": round((talent_pool / applicants * 100), 1)
+            if applicants > 0
+            else 0.0,
+        },
+        {
+            "stage": "Interview",
+            "count": interview,
+            "percentage": round((interview / applicants * 100), 1)
+            if applicants > 0
+            else 0.0,
+        },
+        {
+            "stage": "Hired",
+            "count": hired,
+            "percentage": round((hired / applicants * 100), 1)
+            if applicants > 0
+            else 0.0,
+        },
     ]
 
 
-def get_top_skills(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:  # noqa: E501
+def get_top_skills(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    domain: Optional[str] = None,
+) -> List[Dict[str, Any]]:  # noqa: E501
     candidates_col = get_candidates_collection()
     query = build_filter_query(start_date, end_date, domain)
 
@@ -229,7 +284,7 @@ def get_top_skills(start_date: Optional[str] = None, end_date: Optional[str] = N
                 "skills": {
                     "$concatArrays": [
                         {"$ifNull": ["$matched_skills", []]},
-                        {"$ifNull": ["$missing_skills", []]}
+                        {"$ifNull": ["$missing_skills", []]},
                     ]
                 }
             }
@@ -237,7 +292,7 @@ def get_top_skills(start_date: Optional[str] = None, end_date: Optional[str] = N
         {"$unwind": "$skills"},
         {"$group": {"_id": "$skills", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
-        {"$limit": TOP_SKILLS_LIMIT}
+        {"$limit": TOP_SKILLS_LIMIT},
     ]
 
     try:
@@ -247,28 +302,42 @@ def get_top_skills(start_date: Optional[str] = None, end_date: Optional[str] = N
         return []
 
 
-def get_job_categories(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:  # noqa: E501
+def get_job_categories(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    domain: Optional[str] = None,
+) -> List[Dict[str, Any]]:  # noqa: E501
     candidates_col = get_candidates_collection()
     query = build_filter_query(start_date, end_date, domain)
 
     pipeline = [
         {"$match": query},
         {"$group": {"_id": "$domain", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}}
+        {"$sort": {"count": -1}},
     ]
 
     try:
         results = list(candidates_col.aggregate(pipeline))
         # Map domain code to label
         domain_labels = {
-            "general": "General", "it": "IT", "hr": "HR", "finance": "Finance",
-            "creative": "Creative", "sales": "Sales", "legal": "Legal", "pr": "PR",
-            "ga": "GA", "cs": "Customer Service", "operational": "Operational"
+            "general": "General",
+            "it": "IT",
+            "hr": "HR",
+            "finance": "Finance",
+            "creative": "Creative",
+            "sales": "Sales",
+            "legal": "Legal",
+            "pr": "PR",
+            "ga": "GA",
+            "cs": "Customer Service",
+            "operational": "Operational",
         }
         return [
             {
-                "category": domain_labels.get(r["_id"], str(r["_id"]).capitalize()) if r["_id"] else "General",
-                "count": r["count"]
+                "category": domain_labels.get(r["_id"], str(r["_id"]).capitalize())
+                if r["_id"]
+                else "General",
+                "count": r["count"],
             }
             for r in results
         ]
@@ -277,9 +346,7 @@ def get_job_categories(start_date: Optional[str] = None, end_date: Optional[str]
 
 
 def _build_activity_match_query(
-    start_date: Optional[str],
-    end_date: Optional[str],
-    domain: Optional[str]
+    start_date: Optional[str], end_date: Optional[str], domain: Optional[str]
 ) -> Dict[str, Any]:
     """Build the $match query for activity timeline aggregation."""
     match_query = {}
@@ -293,7 +360,9 @@ def _build_activity_match_query(
 
     if domain and domain.strip() and domain.lower() != "all":
         candidates_col = get_candidates_collection()
-        candidate_ids = [str(c["_id"]) for c in candidates_col.find({"domain": domain}, {"_id": 1})]
+        candidate_ids = [
+            str(c["_id"]) for c in candidates_col.find({"domain": domain}, {"_id": 1})
+        ]
         match_query["candidate_id"] = {"$in": candidate_ids}
 
     return match_query
@@ -303,15 +372,14 @@ def _build_activity_pipeline(match_query: Dict[str, Any]) -> List[Dict[str, Any]
     """Build the aggregation pipeline for activity timeline."""
     return [
         {"$match": match_query},
-        {"$project": {
-            "day": {"$substr": ["$timestamp", 0, DATE_SUBSTR_LENGTH]},
-            "action": "$action"
-        }},
-        {"$group": {
-            "_id": {"day": "$day", "action": "$action"},
-            "count": {"$sum": 1}
-        }},
-        {"$sort": {"_id.day": 1}}
+        {
+            "$project": {
+                "day": {"$substr": ["$timestamp", 0, DATE_SUBSTR_LENGTH]},
+                "action": "$action",
+            }
+        },
+        {"$group": {"_id": {"day": "$day", "action": "$action"}, "count": {"$sum": 1}}},
+        {"$sort": {"_id.day": 1}},
     ]
 
 
@@ -331,7 +399,7 @@ def _format_timeline_results(results: List[Dict[str, Any]]) -> List[Dict[str, An
                 "talent_pool": 0,
                 "interview": 0,
                 "hired": 0,
-                "rejected": 0
+                "rejected": 0,
             }
 
         key = "interview" if action == "interview_scheduled" else action
@@ -342,7 +410,11 @@ def _format_timeline_results(results: List[Dict[str, Any]]) -> List[Dict[str, An
     return sorted(timeline_map.values(), key=lambda x: x["date"])
 
 
-def get_activity_timeline(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:  # noqa: E501
+def get_activity_timeline(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    domain: Optional[str] = None,
+) -> List[Dict[str, Any]]:  # noqa: E501
     activity_col = get_activity_collection()
     match_query = _build_activity_match_query(start_date, end_date, domain)
     pipeline = _build_activity_pipeline(match_query)

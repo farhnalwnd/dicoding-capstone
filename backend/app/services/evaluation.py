@@ -33,12 +33,8 @@ def precision_at_k(relevance_scores: List[int], k: int = 5) -> float:
 # Recall@K
 # =====================================================
 
-def recall_at_k(
-    relevance_scores: List[int],
-    total_relevant: int,
-    k: int = 5
-) -> float:
 
+def recall_at_k(relevance_scores: List[int], total_relevant: int, k: int = 5) -> float:
     if total_relevant == 0:
         return 0.0
 
@@ -53,8 +49,8 @@ def recall_at_k(
 # Reciprocal Rank
 # =====================================================
 
-def reciprocal_rank(relevance_scores: List[int]) -> float:
 
+def reciprocal_rank(relevance_scores: List[int]) -> float:
     for idx, score in enumerate(relevance_scores, start=1):
         if score > RELEVANCE_THRESHOLD:
             return 1.0 / idx
@@ -66,17 +62,12 @@ def reciprocal_rank(relevance_scores: List[int]) -> float:
 # Mean Reciprocal Rank
 # =====================================================
 
-def mean_reciprocal_rank(
-    all_rankings: List[List[int]]
-) -> float:
 
+def mean_reciprocal_rank(all_rankings: List[List[int]]) -> float:
     if not all_rankings:
         return 0.0
 
-    rr_scores = [
-        reciprocal_rank(ranking)
-        for ranking in all_rankings
-    ]
+    rr_scores = [reciprocal_rank(ranking) for ranking in all_rankings]
 
     return float(np.mean(rr_scores))
 
@@ -85,68 +76,42 @@ def mean_reciprocal_rank(
 # NDCG
 # =====================================================
 
-def ndcg_at_k(
-    true_relevance: List[int],
-    predicted_scores: List[float],
-    k: int = 10
-) -> float:
 
+def ndcg_at_k(
+    true_relevance: List[int], predicted_scores: List[float], k: int = 10
+) -> float:
     if len(true_relevance) == 0:
         return 0.0
 
     y_true = np.asarray([true_relevance])
     y_score = np.asarray([predicted_scores])
 
-    return float(
-        ndcg_score(
-            y_true,
-            y_score,
-            k=k
-        )
-    )
+    return float(ndcg_score(y_true, y_score, k=k))
 
 
 # =====================================================
 # Full Ranking Evaluation
 # =====================================================
 
+
 def evaluate_ranking(
-    relevance_scores: List[int],
-    predicted_scores: List[float],
-    k: int = 5
+    relevance_scores: List[int], predicted_scores: List[float], k: int = 5
 ) -> Dict:
+    precision = precision_at_k(relevance_scores, k=k)
 
-    precision = precision_at_k(
-        relevance_scores,
-        k=k
-    )
+    total_relevant = sum(1 for r in relevance_scores if r > RELEVANCE_THRESHOLD)
 
-    total_relevant = sum(
-        1 for r in relevance_scores
-        if r > RELEVANCE_THRESHOLD
-    )
+    recall = recall_at_k(relevance_scores, total_relevant, k=k)
 
-    recall = recall_at_k(
-        relevance_scores,
-        total_relevant,
-        k=k
-    )
+    rr = reciprocal_rank(relevance_scores)
 
-    rr = reciprocal_rank(
-        relevance_scores
-    )
-
-    ndcg = ndcg_at_k(
-        relevance_scores,
-        predicted_scores,
-        k=k
-    )
+    ndcg = ndcg_at_k(relevance_scores, predicted_scores, k=k)
 
     return {
         "precision_at_k": round(precision, 4),
         "recall_at_k": round(recall, 4),
         "reciprocal_rank": round(rr, 4),
-        "ndcg_at_k": round(ndcg, 4)
+        "ndcg_at_k": round(ndcg, 4),
     }
 
 
@@ -154,58 +119,32 @@ def evaluate_ranking(
 # Aggregate Evaluation
 # =====================================================
 
-def evaluate_multiple_queries(
-    rankings: List[Dict],
-    k: int = 5
-) -> Dict:
 
+def evaluate_multiple_queries(rankings: List[Dict], k: int = 5) -> Dict:
     precisions = []
     recalls = []
     reciprocal_ranks = []
     ndcgs = []
 
     for item in rankings:
-
         relevance_scores = item["relevance_scores"]
         predicted_scores = item["predicted_scores"]
 
         result = evaluate_ranking(
-            relevance_scores=relevance_scores,
-            predicted_scores=predicted_scores,
-            k=k
+            relevance_scores=relevance_scores, predicted_scores=predicted_scores, k=k
         )
 
-        precisions.append(
-            result["precision_at_k"]
-        )
+        precisions.append(result["precision_at_k"])
 
-        recalls.append(
-            result["recall_at_k"]
-        )
+        recalls.append(result["recall_at_k"])
 
-        reciprocal_ranks.append(
-            result["reciprocal_rank"]
-        )
+        reciprocal_ranks.append(result["reciprocal_rank"])
 
-        ndcgs.append(
-            result["ndcg_at_k"]
-        )
+        ndcgs.append(result["ndcg_at_k"])
 
     return {
-        "precision_at_k": round(
-            float(np.mean(precisions)),
-            4
-        ),
-        "recall_at_k": round(
-            float(np.mean(recalls)),
-            4
-        ),
-        "mrr": round(
-            float(np.mean(reciprocal_ranks)),
-            4
-        ),
-        "ndcg_at_k": round(
-            float(np.mean(ndcgs)),
-            4
-        )
+        "precision_at_k": round(float(np.mean(precisions)), 4),
+        "recall_at_k": round(float(np.mean(recalls)), 4),
+        "mrr": round(float(np.mean(reciprocal_ranks)), 4),
+        "ndcg_at_k": round(float(np.mean(ndcgs)), 4),
     }

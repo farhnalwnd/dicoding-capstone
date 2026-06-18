@@ -24,7 +24,7 @@ def sanitize_filename(filename: str) -> str:
     # Take only the basename (strip directory components)
     name = os.path.basename(filename)
     # Remove any characters that aren't alphanumeric, dots, hyphens, underscores, or spaces
-    name = re.sub(r'[^\w\s\-\.]', '', name)
+    name = re.sub(r"[^\w\s\-\.]", "", name)
     return name or "unknown_file"
 
 
@@ -44,9 +44,7 @@ def validate_upload_file(filename: str, file_bytes: bytes) -> None:
 
     if len(file_bytes) > MAX_FILE_SIZE_BYTES:
         max_mb = MAX_FILE_SIZE_BYTES / (1024 * 1024)
-        raise ValueError(
-            f"File size exceeds maximum limit of {max_mb:.0f} MB."
-        )
+        raise ValueError(f"File size exceeds maximum limit of {max_mb:.0f} MB.")
 
     if len(file_bytes) == 0:
         raise ValueError("Uploaded file is empty.")

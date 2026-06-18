@@ -8,8 +8,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 
 # Configure model environment variables to absolute local paths ONLY if not already set (e.g. by Docker)
 if "MODEL_BI_ENCODER" not in os.environ or not os.environ["MODEL_BI_ENCODER"]:
-    workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    os.environ["MODEL_BI_ENCODER"] = os.path.join(workspace_root, "models", "bi-encoder-cv-matcher")
+    workspace_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..")
+    )
+    os.environ["MODEL_BI_ENCODER"] = os.path.join(
+        workspace_root, "models", "bi-encoder-cv-matcher"
+    )
 
 print(f"MODEL_BI_ENCODER path: {os.environ.get('MODEL_BI_ENCODER')}")
 
@@ -30,7 +34,9 @@ print(f"Calculated Match Score (Bi-Encoder): {score_be}%")
 cv_non_matching = "I am a creative graphic designer and artist. Experienced in Photoshop, Illustrator, Figma, and painting. I design flyers and posters."  # noqa: E501
 print("\n--- Running Similarity Score Test (NON-MATCHING CASE) ---")
 emb_cv_non = model.encode(cv_non_matching, convert_to_tensor=True)
-score_non_be = round(max(0.0, min(1.0, util.cos_sim(emb_cv_non, emb_jd).item())) * 100, 2)
+score_non_be = round(
+    max(0.0, min(1.0, util.cos_sim(emb_cv_non, emb_jd).item())) * 100, 2
+)
 print(f"Calculated Match Score (Non-matching Bi-Encoder): {score_non_be}%")
 
 print("\n--- Running Hybrid Skills Matching Test (IT Domain) ---")

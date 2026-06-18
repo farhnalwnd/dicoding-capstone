@@ -24,18 +24,18 @@ async def custom_swagger_ui_html():
         swagger_css_url="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css",
     )
 
+
 # ====================================
 # Prometheus Metrics
 # ====================================
 
 metrics_app = make_asgi_app()
 
-app.mount(
-    "/metrics",
-    metrics_app
-)
+app.mount("/metrics", metrics_app)
 
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS", "http://localhost:5173,http://localhost:3000"
+).split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,7 +61,7 @@ def read_root():
 
 @app.get("/api/model-info")
 def get_model_info():
-    bi_encoder_path = os.getenv("MODEL_BI_ENCODER", "paraphrase-multilingual-MiniLM-L12-v2")
-    return {
-        "bi_encoder": os.path.basename(bi_encoder_path)
-    }
+    bi_encoder_path = os.getenv(
+        "MODEL_BI_ENCODER", "paraphrase-multilingual-MiniLM-L12-v2"
+    )
+    return {"bi_encoder": os.path.basename(bi_encoder_path)}

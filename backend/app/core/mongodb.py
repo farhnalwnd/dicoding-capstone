@@ -3,7 +3,9 @@ from pymongo import MongoClient
 
 MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
-    raise RuntimeError("MONGO_URI environment variable is required. Set it before starting the server.")
+    raise RuntimeError(
+        "MONGO_URI environment variable is required. Set it before starting the server."
+    )
 client = MongoClient(MONGO_URI)
 db = client.cv_matcher
 
@@ -34,18 +36,26 @@ def get_audit_logs_collection():
     return db.audit_logs
 
 
-def log_activity(candidate_id: str, candidate_name: str, action: str, details: str = None):
+def log_activity(
+    candidate_id: str, candidate_name: str, action: str, details: str = None
+):
     """Log candidate activity for recruitment timeline statistics."""
     from datetime import datetime, timezone
+
     try:
         activity_col = get_activity_collection()
-        activity_col.insert_one({
-            "candidate_id": str(candidate_id),
-            "candidate_name": candidate_name,
-            "action": action,  # added, talent_pool, interview, interview_scheduled, hired, rejected
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "details": details or ""
-        })
+        activity_col.insert_one(
+            {
+                "candidate_id": str(candidate_id),
+                "candidate_name": candidate_name,
+                "action": action,  # added, talent_pool, interview, interview_scheduled, hired, rejected
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "details": details or "",
+            }
+        )
     except Exception as e:
         import logging
-        logging.getLogger(__name__).warning("Failed to log activity: %s", type(e).__name__)
+
+        logging.getLogger(__name__).warning(
+            "Failed to log activity: %s", type(e).__name__
+        )

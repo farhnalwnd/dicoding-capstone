@@ -23,10 +23,12 @@ def get_model():
         try:
             # Share the model instance if imported inside the app to save memory
             from app.services.nlp import model as app_model
+
             _model = app_model
         except ImportError:
             from sentence_transformers import SentenceTransformer
-            _model = SentenceTransformer('all-MiniLM-L6-v2')
+
+            _model = SentenceTransformer("all-MiniLM-L6-v2")
     return _model
 
 
@@ -39,9 +41,10 @@ def scrape_job_description(job_url: str) -> str:
     try:
         response = requests.get(job_url, headers=headers, timeout=5)
         if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
+            soup = BeautifulSoup(response.text, "html.parser")
             desc_elem = soup.find(
-                "div", class_="show-more-less-html__markup") or soup.find("section", class_="description")
+                "div", class_="show-more-less-html__markup"
+            ) or soup.find("section", class_="description")
             if desc_elem:
                 return desc_elem.text.strip()
     except Exception as e:
@@ -54,12 +57,7 @@ def scrape_linkedin_jobs(keyword: str, location: str, time_range: str = "1w"):
     encoded_keyword = urllib.parse.quote(keyword)
     encoded_location = urllib.parse.quote(location)
 
-    tpr_map = {
-        "1w": "r604800",
-        "1m": "r2592000",
-        "2m": "r5184000",
-        "3m": "r7776000"
-    }
+    tpr_map = {"1w": "r604800", "1m": "r2592000", "2m": "r5184000", "3m": "r7776000"}
     f_tpr = tpr_map.get(time_range, "r604800")
 
     url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={encoded_keyword}&location={encoded_location}&f_TPR={f_tpr}&start=0"  # noqa: E501
@@ -74,7 +72,7 @@ def scrape_linkedin_jobs(keyword: str, location: str, time_range: str = "1w"):
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, "html.parser")
         job_cards = soup.find_all("li")
 
         scraped_count = 0
@@ -105,6 +103,7 @@ def scrape_linkedin_jobs(keyword: str, location: str, time_range: str = "1w"):
 
                 # Clean job description before encoding to keep embeddings clean
                 from app.services.parser import clean_text
+
                 cleaned_desc = clean_text(description)
 
                 # Generate dynamic description embedding for vector search
@@ -119,14 +118,12 @@ def scrape_linkedin_jobs(keyword: str, location: str, time_range: str = "1w"):
                     "description_embedding": description_embedding,
                     "keyword_searched": keyword,
                     "time_range": time_range,
-                    "scraped_at": time.time()
+                    "scraped_at": time.time(),
                 }
 
                 # Upsert based on URL to prevent duplicates
                 jobs_collection.update_one(
-                    {"url": job_url},
-                    {"$set": job_data},
-                    upsert=True
+                    {"url": job_url}, {"$set": job_data}, upsert=True
                 )
                 scraped_count += 1
 

@@ -1,4 +1,5 @@
 import re
+
 """
 Admin Service — Business logic for Admin Control Center.
 Handles platform stats, user management, audit logs, system health, and AI usage metrics.
@@ -34,17 +35,22 @@ MONGO_HEALTHY_CODE = 200
 # Audit Logging
 # ====================================
 
-def log_admin_action(admin_email: str, action: str, target: str = "", details: str = ""):
+
+def log_admin_action(
+    admin_email: str, action: str, target: str = "", details: str = ""
+):
     """Write an admin audit log entry."""
     try:
         col = get_audit_logs_collection()
-        col.insert_one({
-            "admin_email": admin_email,
-            "action": action,
-            "target": target,
-            "details": details,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        col.insert_one(
+            {
+                "admin_email": admin_email,
+                "action": action,
+                "target": target,
+                "details": details,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
     except Exception as e:
         print(f"Failed to log admin action: {e}")
 
@@ -52,6 +58,7 @@ def log_admin_action(admin_email: str, action: str, target: str = "", details: s
 # ====================================
 # Platform Statistics
 # ====================================
+
 
 def get_platform_stats() -> Dict[str, Any]:
     """Return platform-wide KPI counts."""
@@ -89,12 +96,13 @@ def get_platform_stats() -> Dict[str, Any]:
 # User Management
 # ====================================
 
+
 def get_all_users(
     role: Optional[str] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
     skip: int = 0,
-    limit: int = 50
+    limit: int = 50,
 ) -> Dict[str, Any]:
     """Return paginated list of users with optional filters."""
     users_col = get_users_collection()
@@ -116,25 +124,34 @@ def get_all_users(
         ]
 
     total = users_col.count_documents(query)
-    users_cursor = users_col.find(query, {"password": 0}).skip(skip).limit(limit).sort("created_at", -1)
+    users_cursor = (
+        users_col.find(query, {"password": 0})
+        .skip(skip)
+        .limit(limit)
+        .sort("created_at", -1)
+    )
 
     users = []
     for u in users_cursor:
-        users.append({
-            "id": str(u["_id"]),
-            "name": u.get("name", ""),
-            "email": u.get("email", ""),
-            "role": u.get("role", ""),
-            "provider": u.get("provider", "email"),
-            "created_at": u.get("created_at", ""),
-            "last_login": u.get("last_login", ""),
-            "disabled": u.get("disabled", False),
-        })
+        users.append(
+            {
+                "id": str(u["_id"]),
+                "name": u.get("name", ""),
+                "email": u.get("email", ""),
+                "role": u.get("role", ""),
+                "provider": u.get("provider", "email"),
+                "created_at": u.get("created_at", ""),
+                "last_login": u.get("last_login", ""),
+                "disabled": u.get("disabled", False),
+            }
+        )
 
     return {"users": users, "total": total, "skip": skip, "limit": limit}
 
 
-def update_user(user_id: str, role: Optional[str] = None, disabled: Optional[bool] = None) -> Dict[str, Any]:
+def update_user(
+    user_id: str, role: Optional[str] = None, disabled: Optional[bool] = None
+) -> Dict[str, Any]:
     """Update a user's role or disabled status."""
     users_col = get_users_collection()
     try:
@@ -177,10 +194,9 @@ def delete_user(user_id: str) -> Dict[str, Any]:
 # Audit Logs
 # ====================================
 
+
 def get_audit_logs(
-    keyword: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 100
+    keyword: Optional[str] = None, skip: int = 0, limit: int = 100
 ) -> Dict[str, Any]:
     """Return paginated and searchable admin audit logs."""
     col = get_audit_logs_collection()
@@ -195,7 +211,9 @@ def get_audit_logs(
         ]
 
     total = col.count_documents(query)
-    logs_cursor = col.find(query, {"_id": 0}).skip(skip).limit(limit).sort("timestamp", -1)
+    logs_cursor = (
+        col.find(query, {"_id": 0}).skip(skip).limit(limit).sort("timestamp", -1)
+    )
 
     return {
         "logs": list(logs_cursor),
@@ -209,6 +227,7 @@ def get_audit_logs(
 # System Health
 # ====================================
 
+
 def _ping_service(url: str, timeout: int = HEALTH_PING_TIMEOUT) -> Dict[str, Any]:
     """Ping a service URL and return health status."""
     try:
@@ -216,13 +235,31 @@ def _ping_service(url: str, timeout: int = HEALTH_PING_TIMEOUT) -> Dict[str, Any
         resp = requests.get(url, timeout=timeout)
         elapsed = round((datetime.now() - start).total_seconds() * 1000)
         if resp.status_code < 400:
-            return {"status": "healthy", "response_ms": elapsed, "code": resp.status_code}
+            return {
+                "status": "healthy",
+                "response_ms": elapsed,
+                "code": resp.status_code,
+            }
         else:
-            return {"status": "warning", "response_ms": elapsed, "code": resp.status_code}
+            return {
+                "status": "warning",
+                "response_ms": elapsed,
+                "code": resp.status_code,
+            }
     except requests.exceptions.ConnectionError:
-        return {"status": "error", "response_ms": None, "code": None, "detail": "Connection refused"}
+        return {
+            "status": "error",
+            "response_ms": None,
+            "code": None,
+            "detail": "Connection refused",
+        }
     except requests.exceptions.Timeout:
-        return {"status": "warning", "response_ms": None, "code": None, "detail": "Timeout"}
+        return {
+            "status": "warning",
+            "response_ms": None,
+            "code": None,
+            "detail": "Timeout",
+        }
     except Exception as e:
         return {"status": "error", "response_ms": None, "code": None, "detail": str(e)}
 
@@ -240,10 +277,16 @@ def _check_mongodb_health() -> Dict[str, Any]:
     """Check MongoDB health via ping command."""
     try:
         from app.core.mongodb import db
+
         db.command("ping")
         health = {"status": "healthy", "response_ms": None, "code": MONGO_HEALTHY_CODE}
     except Exception as e:
-        health = {"status": "error", "response_ms": None, "code": None, "detail": str(e)}
+        health = {
+            "status": "error",
+            "response_ms": None,
+            "code": None,
+            "detail": str(e),
+        }
     health["name"] = "MongoDB"
     health["icon"] = "database"
     return health
@@ -282,7 +325,11 @@ def _check_github_health() -> Dict[str, Any]:
     github_repo = os.getenv("GITHUB_REPO", "")
 
     if not (github_token and github_repo):
-        health = {"status": "unknown", "detail": "GITHUB_TOKEN/GITHUB_REPO not configured", "response_ms": None}
+        health = {
+            "status": "unknown",
+            "detail": "GITHUB_TOKEN/GITHUB_REPO not configured",
+            "response_ms": None,
+        }
         health["name"] = "GitHub Actions"
         health["icon"] = "ci"
         return health
@@ -291,7 +338,7 @@ def _check_github_health() -> Dict[str, Any]:
         resp = requests.get(
             f"https://api.github.com/repos/{github_repo}/actions/runs?per_page={GITHUB_RUNS_PER_PAGE}",
             headers={"Authorization": f"Bearer {github_token}"},
-            timeout=GITHUB_API_TIMEOUT
+            timeout=GITHUB_API_TIMEOUT,
         )
         if resp.status_code == 200:
             runs = resp.json().get("workflow_runs", [])
@@ -304,7 +351,11 @@ def _check_github_health() -> Dict[str, Any]:
                 gh_status = "warning"
             health = {"status": gh_status, "detail": conclusion, "response_ms": None}
         else:
-            health = {"status": "warning", "detail": f"HTTP {resp.status_code}", "response_ms": None}
+            health = {
+                "status": "warning",
+                "detail": f"HTTP {resp.status_code}",
+                "response_ms": None,
+            }
     except Exception as e:
         health = {"status": "error", "detail": str(e), "response_ms": None}
 
@@ -335,13 +386,14 @@ def get_system_health() -> Dict[str, Any]:
     return {
         "overall": _compute_overall_status(services),
         "services": services,
-        "checked_at": datetime.now(timezone.utc).isoformat()
+        "checked_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
 # ====================================
 # AI Usage Metrics
 # ====================================
+
 
 def get_ai_usage() -> Dict[str, Any]:
     """
@@ -357,7 +409,7 @@ def get_ai_usage() -> Dict[str, Any]:
             resp = requests.get(
                 f"{prometheus_base}/api/v1/query",
                 params={"query": f"sum({metric_name})"},
-                timeout=HEALTH_PING_TIMEOUT
+                timeout=HEALTH_PING_TIMEOUT,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -379,7 +431,11 @@ def get_ai_usage() -> Dict[str, Any]:
 
     # Average match score from candidates
     candidates_col = get_candidates_collection()
-    scores = [c["match_score"] for c in candidates_col.find({}, {"match_score": 1}) if "match_score" in c]
+    scores = [
+        c["match_score"]
+        for c in candidates_col.find({}, {"match_score": 1})
+        if "match_score" in c
+    ]
     avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
 
     return {
@@ -396,6 +452,7 @@ def get_ai_usage() -> Dict[str, Any]:
 # Recruitment Overview
 # ====================================
 
+
 def get_recruitment_overview() -> Dict[str, Any]:
     """Return recruitment funnel totals and hiring rate."""
     candidates_col = get_candidates_collection()
@@ -410,31 +467,37 @@ def get_recruitment_overview() -> Dict[str, Any]:
 
     # Pipeline by month (last 6 months)
     from datetime import timedelta
+
     now = datetime.now(timezone.utc)
     monthly_data = []
     for i in range(5, -1, -1):
-        month_start = (now - timedelta(days=30 * i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_start = (now - timedelta(days=30 * i)).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
         if i > 0:
-            month_end = (now - timedelta(days=30 * (i - 1))).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            month_end = (now - timedelta(days=30 * (i - 1))).replace(
+                day=1, hour=0, minute=0, second=0, microsecond=0
+            )
         else:
             month_end = now
 
         m_start_iso = month_start.isoformat()
         m_end_iso = month_end.isoformat()
 
-        month_total = candidates_col.count_documents({
-            "created_at": {"$gte": m_start_iso, "$lt": m_end_iso}
-        })
-        month_hired = candidates_col.count_documents({
-            "status": "hired",
-            "created_at": {"$gte": m_start_iso, "$lt": m_end_iso}
-        })
+        month_total = candidates_col.count_documents(
+            {"created_at": {"$gte": m_start_iso, "$lt": m_end_iso}}
+        )
+        month_hired = candidates_col.count_documents(
+            {"status": "hired", "created_at": {"$gte": m_start_iso, "$lt": m_end_iso}}
+        )
 
-        monthly_data.append({
-            "month": month_start.strftime("%b %Y"),
-            "applications": month_total,
-            "hired": month_hired
-        })
+        monthly_data.append(
+            {
+                "month": month_start.strftime("%b %Y"),
+                "applications": month_total,
+                "hired": month_hired,
+            }
+        )
 
     return {
         "total_applications": total,

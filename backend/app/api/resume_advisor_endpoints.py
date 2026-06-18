@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 from app.core.auth import get_current_user
-from app.services.resume_advisor_service import generate_advisor_recommendations, generate_advisor_pdf
+from app.services.resume_advisor_service import (
+    generate_advisor_recommendations,
+    generate_advisor_pdf,
+)
 
 router = APIRouter()
 
@@ -12,7 +15,9 @@ class ResumeAdvisorRequest(BaseModel):
     matched_skills: List[str] = Field(default=[], description="List of skills matched")
     missing_skills: List[str] = Field(default=[], description="List of skills missing")
     recommendation: str = Field(..., description="Current recommendation level")
-    job_description: str = Field(..., description="Raw text of job description requirements")
+    job_description: str = Field(
+        ..., description="Raw text of job description requirements"
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -21,7 +26,7 @@ class ResumeAdvisorRequest(BaseModel):
                 "matched_skills": ["Python", "FastAPI"],
                 "missing_skills": ["Docker", "Kubernetes", "CI/CD"],
                 "recommendation": "Moderate Match",
-                "job_description": "Looking for a backend engineer with Python, FastAPI, Docker and Kubernetes."
+                "job_description": "Looking for a backend engineer with Python, FastAPI, Docker and Kubernetes.",
             }
         }
     }
@@ -50,8 +55,7 @@ class ResumeAdvisorResponse(BaseModel):
 
 @router.post("", response_model=ResumeAdvisorResponse)
 async def get_advisor_advice(
-    payload: ResumeAdvisorRequest,
-    current_user: dict = Depends(get_current_user)
+    payload: ResumeAdvisorRequest, current_user: dict = Depends(get_current_user)
 ):
     """
     Get AI-driven CV recommendations and custom learning roadmap based on CV-JD analysis.
@@ -60,7 +64,7 @@ async def get_advisor_advice(
     if current_user.get("role") != "jobseeker":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. Only Job Seekers can access the Resume Advisor."
+            detail="Access denied. Only Job Seekers can access the Resume Advisor.",
         )
 
     result = generate_advisor_recommendations(
@@ -68,7 +72,7 @@ async def get_advisor_advice(
         matched_skills=payload.matched_skills,
         missing_skills=payload.missing_skills,
         recommendation=payload.recommendation,
-        job_description=payload.job_description
+        job_description=payload.job_description,
     )
 
     return result
@@ -76,8 +80,7 @@ async def get_advisor_advice(
 
 @router.post("/export")
 async def export_advisor_pdf_report(
-    recommendations: Dict[str, Any],
-    current_user: dict = Depends(get_current_user)
+    recommendations: Dict[str, Any], current_user: dict = Depends(get_current_user)
 ):
     """
     Export the advisor's recommendations as a downloadable PDF report.
@@ -86,7 +89,7 @@ async def export_advisor_pdf_report(
     if current_user.get("role") != "jobseeker":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. Only Job Seekers can export reports."
+            detail="Access denied. Only Job Seekers can export reports.",
         )
 
     try:
@@ -96,11 +99,11 @@ async def export_advisor_pdf_report(
             media_type="application/pdf",
             headers={
                 "Content-Disposition": "attachment; filename=AI_Resume_Advisor_Report.pdf",
-                "Access-Control-Expose-Headers": "Content-Disposition"
-            }
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            },
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate PDF report: {str(e)}"
+            detail=f"Failed to generate PDF report: {str(e)}",
         )

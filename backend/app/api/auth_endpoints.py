@@ -31,6 +31,7 @@ PASSWORD_MAX_LENGTH = 128
 # Request / Response Models
 # ====================================
 
+
 class RegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=NAME_MAX_LENGTH)
     email: EmailStr
@@ -99,7 +100,9 @@ def _register_new_google_user(name: str, email: str, users) -> AuthResponse:
     except DuplicateKeyError:
         # Race condition: another request created the user
         user = users.find_one({"email": email})
-        token = create_access_token(data={"sub": user["email"], "role": user.get("role")})
+        token = create_access_token(
+            data={"sub": user["email"], "role": user.get("role")}
+        )
         return AuthResponse(
             access_token=token,
             user={
@@ -130,7 +133,10 @@ def _register_new_google_user(name: str, email: str, users) -> AuthResponse:
 # Endpoints
 # ====================================
 
-@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(data: RegisterRequest):
     """Register a new user with email and password."""
     users = get_users_collection()
@@ -281,7 +287,9 @@ class SetRoleRequest(BaseModel):
 
 
 @router.post("/set-role", response_model=AuthResponse)
-async def set_role(data: SetRoleRequest, current_user: dict = Depends(get_current_user)):
+async def set_role(
+    data: SetRoleRequest, current_user: dict = Depends(get_current_user)
+):
     """
     Set the role for a new Google-registered user who hasn't chosen one yet.
     """

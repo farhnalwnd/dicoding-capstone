@@ -43,7 +43,7 @@ def load_domain_config(domain: str = "general") -> Dict:
             "threshold_master_match": 0.77,
             "skills": [],
             "experience_keywords": [],
-            "education_keywords": []
+            "education_keywords": [],
         }
         _domain_configs_cache[domain] = config
         return config

@@ -4,15 +4,20 @@ from sentence_transformers import SentenceTransformer, util
 from sklearn.cluster import KMeans
 from typing import List, Dict, Any, Tuple
 
-from app.services.explainability import (
-    build_match_explanation
-)
+from app.services.explainability import build_match_explanation
 
 MODEL_MAIN = os.getenv("MODEL_MAIN", "paraphrase-multilingual-MiniLM-L12-v2")
-MODEL_BI_ENCODER = os.getenv("MODEL_BI_ENCODER", "paraphrase-multilingual-MiniLM-L12-v2")
+MODEL_BI_ENCODER = os.getenv(
+    "MODEL_BI_ENCODER", "paraphrase-multilingual-MiniLM-L12-v2"
+)
 
 # Fallback: if local model path doesn't exist, use base HuggingFace model
-if MODEL_BI_ENCODER and not os.path.exists(MODEL_BI_ENCODER) and '/' in MODEL_BI_ENCODER and not MODEL_BI_ENCODER.startswith('sentence-transformers'):  # noqa: E501
+if (
+    MODEL_BI_ENCODER
+    and not os.path.exists(MODEL_BI_ENCODER)
+    and "/" in MODEL_BI_ENCODER
+    and not MODEL_BI_ENCODER.startswith("sentence-transformers")
+):  # noqa: E501
     print(f"[NLP] Fine-tuned model not found at: {MODEL_BI_ENCODER}")
     print(f"[NLP] Falling back to: {MODEL_MAIN}")
     MODEL_BI_ENCODER = MODEL_MAIN
@@ -32,39 +37,103 @@ DEFAULT_THRESHOLD_DIRECT = 0.75
 DEFAULT_THRESHOLD_MASTER = 0.82
 
 _SPLIT_CONJUNCTIONS = {
-    "and", "or", "dan", "atau", "with", "using", "menggunakan", "dengan",
-    "for", "untuk", "in", "di", "on", "pada", "from", "dari", "to", "ke",
-    "by", "as", "including", "termasuk", "such as", "seperti", "maupun",
-    "ataupun", "vs", "versus",
+    "and",
+    "or",
+    "dan",
+    "atau",
+    "with",
+    "using",
+    "menggunakan",
+    "dengan",
+    "for",
+    "untuk",
+    "in",
+    "di",
+    "on",
+    "pada",
+    "from",
+    "dari",
+    "to",
+    "ke",
+    "by",
+    "as",
+    "including",
+    "termasuk",
+    "such as",
+    "seperti",
+    "maupun",
+    "ataupun",
+    "vs",
+    "versus",
 }
 
 _CONJUNCTION_SPLIT_PATTERN = re.compile(
-    r'\b(?:and|or|dan|atau|with|using|menggunakan|dengan|for|untuk'
-    r'|in|di|on|pada|from|dari|to|ke|by|as|including|termasuk'
-    r'|such as|seperti|maupun|ataupun|vs|versus)\b',
+    r"\b(?:and|or|dan|atau|with|using|menggunakan|dengan|for|untuk"
+    r"|in|di|on|pada|from|dari|to|ke|by|as|including|termasuk"
+    r"|such as|seperti|maupun|ataupun|vs|versus)\b",
     re.IGNORECASE,
 )
 
-_PHRASE_SPLIT_PATTERN = re.compile(r'[\n,;\t•|.:()\[\]]')
-_PUNCTUATION_STRIP_PATTERN = re.compile(r'^[^\w+#-]+|[^\w+#-]+$')
-_TECH_TOKEN_PATTERN = re.compile(r'\b[a-zA-Z0-9+#.-]{2,20}\b')
+_PHRASE_SPLIT_PATTERN = re.compile(r"[\n,;\t•|.:()\[\]]")
+_PUNCTUATION_STRIP_PATTERN = re.compile(r"^[^\w+#-]+|[^\w+#-]+$")
+_TECH_TOKEN_PATTERN = re.compile(r"\b[a-zA-Z0-9+#.-]{2,20}\b")
 
-_GENERIC_WORDS = frozenset({
-    "key", "interface", "integration", "integrations", "principle", "principles",
-    "testable", "building", "designing", "documented", "maintaining", "robust",
-})
+_GENERIC_WORDS = frozenset(
+    {
+        "key",
+        "interface",
+        "integration",
+        "integrations",
+        "principle",
+        "principles",
+        "testable",
+        "building",
+        "designing",
+        "documented",
+        "maintaining",
+        "robust",
+    }
+)
 
-_ROLE_WORDS = frozenset({
-    "engineer", "engineers", "developer", "developers", "architect", "architects",
-    "manager", "managers", "consultant", "consultants", "analyst", "analysts",
-    "officer", "officers",
-})
+_ROLE_WORDS = frozenset(
+    {
+        "engineer",
+        "engineers",
+        "developer",
+        "developers",
+        "architect",
+        "architects",
+        "manager",
+        "managers",
+        "consultant",
+        "consultants",
+        "analyst",
+        "analysts",
+        "officer",
+        "officers",
+    }
+)
 
-_ACTION_WORDS = frozenset({
-    "collaborate", "collaborating", "implement", "implementing", "build", "building",
-    "maintain", "maintaining", "design", "designing", "develop", "developing",
-    "support", "supporting", "integrate", "integrating",
-})
+_ACTION_WORDS = frozenset(
+    {
+        "collaborate",
+        "collaborating",
+        "implement",
+        "implementing",
+        "build",
+        "building",
+        "maintain",
+        "maintaining",
+        "design",
+        "designing",
+        "develop",
+        "developing",
+        "support",
+        "supporting",
+        "integrate",
+        "integrating",
+    }
+)
 
 _skills_embeddings_cache: Dict[str, Any] = {}
 
@@ -73,7 +142,9 @@ def get_skill_embeddings_for_skills(skills: List[str]):
     embeddings = {}
     for skill in skills:
         if skill not in _skills_embeddings_cache:
-            _skills_embeddings_cache[skill] = model.encode(skill, convert_to_tensor=True)
+            _skills_embeddings_cache[skill] = model.encode(
+                skill, convert_to_tensor=True
+            )
         embeddings[skill] = _skills_embeddings_cache[skill]
     return embeddings
 
@@ -97,11 +168,7 @@ def _compute_domain_relevance(cv_text: str, domain_skills: List[str]) -> float:
     return round((cv_domain_hits / len(domain_skills)) * MAX_SCORE_PERCENTAGE, 2)
 
 
-def analyze_cv_jd(
-    cv_text: str,
-    jd_text: str,
-    domain: str
-):
+def analyze_cv_jd(cv_text: str, jd_text: str, domain: str):
     """
     Complete explainable CV-JD analysis
     """
@@ -113,12 +180,15 @@ def analyze_cv_jd(
     similarity_score = get_similarity_score(cv_text, jd_text)
 
     matched_skills, missing_skills, skill_scores = match_cv_jd_hybrid(
-        cv_text=cv_text, jd_text=jd_text, domain=domain,
+        cv_text=cv_text,
+        jd_text=jd_text,
+        domain=domain,
     )
 
     config = load_domain_config(domain)
     domain_relevance = _compute_domain_relevance(
-        cv_text, config.get("skills", []),
+        cv_text,
+        config.get("skills", []),
     )
 
     explanation = build_match_explanation(
@@ -135,7 +205,11 @@ def _split_on_conjunctions(phrase: str) -> List[str]:
     """Split a phrase on conjunction words, returning non-empty parts."""
     p_lower = phrase.lower()
     if any(f" {w} " in f" {p_lower} " for w in _SPLIT_CONJUNCTIONS):
-        return [part.strip() for part in _CONJUNCTION_SPLIT_PATTERN.split(phrase) if part.strip()]
+        return [
+            part.strip()
+            for part in _CONJUNCTION_SPLIT_PATTERN.split(phrase)
+            if part.strip()
+        ]
     return [phrase]
 
 
@@ -161,7 +235,7 @@ def _clean_and_validate_subphrase(sub_p: str, stopwords: set) -> str | None:
     if all(w.lower() in stopwords for w in sub_words):
         return None
 
-    p_clean = _PUNCTUATION_STRIP_PATTERN.sub('', sub_p).strip()
+    p_clean = _PUNCTUATION_STRIP_PATTERN.sub("", sub_p).strip()
     p_words = _strip_edge_stopwords(p_clean.split(), stopwords)
     p_clean = " ".join(p_words).strip()
 
@@ -176,10 +250,10 @@ def _extract_tech_tokens(text: str, stopwords: set) -> List[str]:
     for w in _TECH_TOKEN_PATTERN.findall(text):
         if w.lower() in stopwords:
             continue
-        is_tech_char = any(c in w for c in '+#.-')
+        is_tech_char = any(c in w for c in "+#.-")
         is_all_caps = w.isupper() and len(w) >= MIN_PHRASE_LENGTH
         if is_tech_char or is_all_caps:
-            w_clean = _PUNCTUATION_STRIP_PATTERN.sub('', w)
+            w_clean = _PUNCTUATION_STRIP_PATTERN.sub("", w)
             if len(w_clean) >= MIN_PHRASE_LENGTH and w_clean.lower() not in stopwords:
                 results.append(w_clean)
     return results
@@ -203,9 +277,13 @@ def extract_phrases(text: str) -> List[str]:
 
     valid_phrases.extend(_extract_tech_tokens(text, STOPWORDS))
 
-    return list(set(
-        p for p in valid_phrases if MIN_PHRASE_LENGTH <= len(p) < MAX_PHRASE_CHAR_LENGTH
-    ))
+    return list(
+        set(
+            p
+            for p in valid_phrases
+            if MIN_PHRASE_LENGTH <= len(p) < MAX_PHRASE_CHAR_LENGTH
+        )
+    )
 
 
 def normalize_skill_name(name: str) -> str:
@@ -214,8 +292,8 @@ def normalize_skill_name(name: str) -> str:
     like .js, js, framework, library to allow flexible exact matching.
     """
     n = name.lower().strip()
-    n = re.sub(r'(?:[\s.-]?js|[\s.-]?j\.s|[\s.-]?j-s)$', '', n)
-    n = re.sub(r'(?:[\s.-]?framework|[\s.-]?library)$', '', n)
+    n = re.sub(r"(?:[\s.-]?js|[\s.-]?j\.s|[\s.-]?j-s)$", "", n)
+    n = re.sub(r"(?:[\s.-]?framework|[\s.-]?library)$", "", n)
     return n.strip()
 
 
@@ -228,7 +306,7 @@ def has_skill_exact(skill: str, text: str) -> bool:
     skill_norm = normalize_skill_name(skill)
 
     # 1. Soft matching by tokenizing and normalizing each token in the text
-    tokens = re.findall(r'\b[a-zA-Z0-9+#.-]+\b', text)
+    tokens = re.findall(r"\b[a-zA-Z0-9+#.-]+\b", text)
     for token in tokens:
         if normalize_skill_name(token) == skill_norm:
             return True
@@ -239,25 +317,29 @@ def has_skill_exact(skill: str, text: str) -> bool:
     escaped = re.escape(skill_lower)
 
     pattern = ""
-    if re.match(r'^\w', skill_lower):
-        pattern += r'\b'
+    if re.match(r"^\w", skill_lower):
+        pattern += r"\b"
     pattern += escaped
-    if re.search(r'\w$', skill_lower):
-        pattern += r'\b'
+    if re.search(r"\w$", skill_lower):
+        pattern += r"\b"
 
     return bool(re.search(pattern, text_lower))
 
 
 def clean_skill_phrase(skill: str) -> str:
     # Remove bullet symbols and formatting characters from start and end
-    s = re.sub(r'^[-\*•\s]+', '', skill)
-    s = re.sub(r'[-\*•\s]+$', '', s)
+    s = re.sub(r"^[-\*•\s]+", "", skill)
+    s = re.sub(r"[-\*•\s]+$", "", s)
     return s.strip()
 
 
 def _is_blacklisted_phrase(phrase_lower: str, words: List[str]) -> bool:
     """Return True if the phrase or its words hit any blacklist."""
-    if phrase_lower in _GENERIC_WORDS or phrase_lower in _ROLE_WORDS or phrase_lower in _ACTION_WORDS:
+    if (
+        phrase_lower in _GENERIC_WORDS
+        or phrase_lower in _ROLE_WORDS
+        or phrase_lower in _ACTION_WORDS
+    ):
         return True
     if any(w in _ROLE_WORDS for w in words):
         return True
@@ -289,27 +371,32 @@ def is_valid_skill(phrase: str, domain_skills: set[str]) -> bool:
     if _is_blacklisted_phrase(phrase_lower, words):
         return False
 
-    if all(w in STOPWORDS or w in _GENERIC_WORDS or w in _ROLE_WORDS or w in _ACTION_WORDS for w in words):
+    if all(
+        w in STOPWORDS or w in _GENERIC_WORDS or w in _ROLE_WORDS or w in _ACTION_WORDS
+        for w in words
+    ):
         return False
 
     return True
 
 
 def _get_tokens(s: str) -> List[str]:
-    return re.findall(r'[a-zA-Z0-9]+', s.lower())
+    return re.findall(r"[a-zA-Z0-9]+", s.lower())
 
 
 def _is_sublist(sub: List[str], lst: List[str]) -> bool:
     n, m = len(sub), len(lst)
     for i in range(m - n + 1):
-        if lst[i:i+n] == sub:
+        if lst[i : i + n] == sub:
             return True
     return False
 
 
 def _resolve_sublist_conflict(
-    idx_short: int, idx_long: int,
-    skill_short: str, skill_long: str,
+    idx_short: int,
+    idx_long: int,
+    skill_short: str,
+    skill_long: str,
     ds_lower: set,
 ) -> int:
     """Decide which index to remove when one skill's tokens are a sublist of another's."""
@@ -388,7 +475,7 @@ def extract_jd_target_skills(jd_text: str, domain: str) -> List[str]:
         "reactjs": "React",
         "node": "Node.js",
         "node.js": "Node.js",
-        "nodejs": "Node.js"
+        "nodejs": "Node.js",
     }
     for var_name, norm_name in NORMALIZATION_MAP.items():
         if has_skill_exact(var_name, jd_text):
@@ -399,7 +486,8 @@ def extract_jd_target_skills(jd_text: str, domain: str) -> List[str]:
 
 
 def _exact_match_skills(
-    target_skills: List[str], cv_text: str,
+    target_skills: List[str],
+    cv_text: str,
 ) -> Tuple[Dict[str, float], List[str]]:
     """Split target skills into exact-matched (with score) and remaining for semantic check."""
     matched: Dict[str, float] = {}
@@ -445,7 +533,9 @@ def _semantic_match_skills(
     return matched, missing
 
 
-def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_target_skills: List[str] = None) -> Tuple[List[str], List[str], Dict[str, float]]:  # noqa: E501
+def match_cv_jd_hybrid(
+    cv_text: str, jd_text: str, domain: str, precomputed_target_skills: List[str] = None
+) -> Tuple[List[str], List[str], Dict[str, float]]:  # noqa: E501
     """
     Hybrid semantic matching using batch encoding for significant performance improvements.
     Uses precomputed target skills to avoid extracting JD phrases for every candidate.
@@ -457,32 +547,48 @@ def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_targ
     threshold_direct = config.get("threshold_direct_match", DEFAULT_THRESHOLD_DIRECT)
     threshold_master = config.get("threshold_master_match", DEFAULT_THRESHOLD_MASTER)
 
-    target_skills = precomputed_target_skills if precomputed_target_skills is not None else extract_jd_target_skills(
-        jd_text, domain)
+    target_skills = (
+        precomputed_target_skills
+        if precomputed_target_skills is not None
+        else extract_jd_target_skills(jd_text, domain)
+    )
     if not target_skills:
         return [], [], {}
 
     cv_phrases = extract_phrases(cv_text)
 
-    matched_with_scores, semantic_check_skills = _exact_match_skills(target_skills, cv_text)
+    matched_with_scores, semantic_check_skills = _exact_match_skills(
+        target_skills, cv_text
+    )
 
     sem_matched, sem_missing = _semantic_match_skills(
-        semantic_check_skills, cv_phrases, domain_skills,
-        threshold_direct, threshold_master,
+        semantic_check_skills,
+        cv_phrases,
+        domain_skills,
+        threshold_direct,
+        threshold_master,
     )
     matched_with_scores.update(sem_matched)
 
-    matched_skills = sorted(matched_with_scores, key=matched_with_scores.get, reverse=True)
+    matched_skills = sorted(
+        matched_with_scores, key=matched_with_scores.get, reverse=True
+    )
     missing_skills = sorted(sem_missing, key=sem_missing.get, reverse=True)
 
-    matched_skills = deduplicate_skills(matched_skills, domain_skills)[:MAX_OUTPUT_SKILLS]
-    missing_skills = deduplicate_skills(missing_skills, domain_skills)[:MAX_OUTPUT_SKILLS]
+    matched_skills = deduplicate_skills(matched_skills, domain_skills)[
+        :MAX_OUTPUT_SKILLS
+    ]
+    missing_skills = deduplicate_skills(missing_skills, domain_skills)[
+        :MAX_OUTPUT_SKILLS
+    ]
 
     skill_scores = {**matched_with_scores, **sem_missing}
     return matched_skills, missing_skills, skill_scores
 
 
-def cluster_documents(texts: List[str], filenames: List[str], num_clusters: int = 3) -> List[Dict[str, Any]]:
+def cluster_documents(
+    texts: List[str], filenames: List[str], num_clusters: int = 3
+) -> List[Dict[str, Any]]:
     if not texts:
         return []
     if len(texts) < num_clusters:
@@ -496,10 +602,7 @@ def cluster_documents(texts: List[str], filenames: List[str], num_clusters: int 
 
     clusters = {i: [] for i in range(num_clusters)}
     for idx, label in enumerate(labels):
-        clusters[label].append({
-            "filename": filenames[idx],
-            "text": texts[idx]
-        })
+        clusters[label].append({"filename": filenames[idx], "text": texts[idx]})
 
     result = []
     for cluster_id, items in clusters.items():
@@ -507,23 +610,33 @@ def cluster_documents(texts: List[str], filenames: List[str], num_clusters: int 
         cluster_phrases = extract_phrases(combined_text)
 
         if cluster_phrases:
-            phrase_embs = model.encode(cluster_phrases[:CLUSTER_MAX_PHRASES], convert_to_tensor=True)
+            phrase_embs = model.encode(
+                cluster_phrases[:CLUSTER_MAX_PHRASES], convert_to_tensor=True
+            )
             cluster_skills = []
 
-            for skill_name, skill_emb in get_skill_embeddings_for_skills([]).items():  # noqa: E501
+            for skill_name, skill_emb in get_skill_embeddings_for_skills(
+                []
+            ).items():  # noqa: E501
                 similarities = util.cos_sim(skill_emb, phrase_embs)[0]
                 max_sim = similarities.max().item()
                 if max_sim > CLUSTER_SIMILARITY_THRESHOLD:
                     cluster_skills.append(skill_name)
 
-            suggested_label = " / ".join(cluster_skills[:3]) if cluster_skills else f"Cluster {cluster_id + 1}"
+            suggested_label = (
+                " / ".join(cluster_skills[:3])
+                if cluster_skills
+                else f"Cluster {cluster_id + 1}"
+            )
         else:
             suggested_label = f"Cluster {cluster_id + 1}"
 
-        result.append({
-            "cluster_id": cluster_id,
-            "suggested_label": suggested_label,
-            "candidates": [item["filename"] for item in items]
-        })
+        result.append(
+            {
+                "cluster_id": cluster_id,
+                "suggested_label": suggested_label,
+                "candidates": [item["filename"] for item in items],
+            }
+        )
 
     return result
