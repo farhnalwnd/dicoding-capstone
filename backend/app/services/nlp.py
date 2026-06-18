@@ -387,7 +387,7 @@ def _get_tokens(s: str) -> List[str]:
 def _is_sublist(sub: List[str], lst: List[str]) -> bool:
     n, m = len(sub), len(lst)
     for i in range(m - n + 1):
-        if lst[i : i + n] == sub:
+        if lst[i : i + n] == sub:  # noqa: E203
             return True
     return False
 
