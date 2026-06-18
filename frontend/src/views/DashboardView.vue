@@ -115,10 +115,10 @@
 
         <!-- HR Actions -->
         <div v-if="isHrRole" class="actions-grid">
-          <router-link to="/hr/rank" class="action-card glass-panel">
+          <router-link to="/hr/rank-cv" class="action-card glass-panel">
             <span class="action-icon">🏆</span>
             <div class="action-content-card">
-              <h4>Bulk CV Ranking</h4>
+              <h4>Rank CV</h4>
               <p>Upload multiple resumes to match and rank them against a job description.</p>
               <span class="action-link-text">Open Module →</span>
             </div>
@@ -142,14 +142,7 @@
             </div>
           </router-link>
 
-          <router-link to="/hr/search" class="action-card glass-panel">
-            <span class="action-icon">🔍</span>
-            <div class="action-content-card">
-              <h4>Talent Search</h4>
-              <p>Search for best-fitting candidates using AI semantic matching.</p>
-              <span class="action-link-text">Search Talent →</span>
-            </div>
-          </router-link>
+
 
           <router-link to="/hr-dashboard" class="action-card glass-panel">
             <span class="action-icon">📊</span>
@@ -166,7 +159,7 @@
           <router-link to="/jobseeker/analyze" class="action-card glass-panel">
             <span class="action-icon">📄</span>
             <div class="action-content-card">
-              <h4>CV-JD Analysis</h4>
+              <h4>Check Resume</h4>
               <p>Analyze how well your resume matches a specific job description.</p>
               <span class="action-link-text">Analyze Now →</span>
             </div>
@@ -392,7 +385,7 @@ onMounted(() => {
 }
 
 .actions-grid.jobseeker {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, 1fr);
 }
 
 /* Advisor card highlight */

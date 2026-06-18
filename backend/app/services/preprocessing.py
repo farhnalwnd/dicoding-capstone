@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict
+from typing import List
 
 from app.services.parser import clean_text
 

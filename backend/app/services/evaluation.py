@@ -8,6 +8,7 @@ RELEVANCE_THRESHOLD = 2
 # Precision@K
 # =====================================================
 
+
 def precision_at_k(relevance_scores: List[int], k: int = 5) -> float:
     """
     relevance_scores:

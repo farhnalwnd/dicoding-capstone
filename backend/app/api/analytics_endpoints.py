@@ -5,6 +5,7 @@ from app.services import analytics_service
 
 router = APIRouter()
 
+
 @router.get("/hr-dashboard/stats", response_model=Dict[str, Any])
 async def get_stats(
     start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
@@ -13,6 +14,7 @@ async def get_stats(
     current_user: dict = Depends(require_role("hr"))
 ):
     return analytics_service.get_recruitment_stats(start_date, end_date, domain)
+
 
 @router.get("/hr-dashboard/funnel", response_model=List[Dict[str, Any]])
 async def get_funnel(
@@ -23,6 +25,7 @@ async def get_funnel(
 ):
     return analytics_service.get_candidate_funnel(start_date, end_date, domain)
 
+
 @router.get("/hr-dashboard/skills", response_model=List[Dict[str, Any]])
 async def get_skills(
     start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
@@ -32,6 +35,7 @@ async def get_skills(
 ):
     return analytics_service.get_top_skills(start_date, end_date, domain)
 
+
 @router.get("/hr-dashboard/categories", response_model=List[Dict[str, Any]])
 async def get_categories(
     start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
@@ -40,6 +44,7 @@ async def get_categories(
     current_user: dict = Depends(require_role("hr"))
 ):
     return analytics_service.get_job_categories(start_date, end_date, domain)
+
 
 @router.get("/hr-dashboard/timeline", response_model=List[Dict[str, Any]])
 async def get_timeline(

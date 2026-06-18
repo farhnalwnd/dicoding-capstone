@@ -47,15 +47,7 @@
           <span v-if="locationError" class="inline-error">{{ locationError }}</span>
         </div>
 
-        <div class="form-group">
-          <label for="max-results">Maximum Results</label>
-          <select id="max-results" v-model="maxResults" class="input-field" :disabled="showLoader || loading">
-            <option :value="10">10 Results</option>
-            <option :value="20">20 Results (Default)</option>
-            <option :value="50">50 Results</option>
-            <option :value="100">100 Results</option>
-          </select>
-        </div>
+
       </div>
 
       <!-- Section 3 — Modern Action Buttons -->
@@ -235,7 +227,7 @@ const toast = inject('toast')
 const keyword = ref('')
 const location = ref('')
 const timeRange = ref('1w')
-const maxResults = ref(20)
+const maxResults = ref(10)
 const loading = ref(false)
 
 // SSE Progress Simulator States
@@ -533,7 +525,7 @@ onMounted(() => {
 
 .controls-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 1.5rem;
   margin-bottom: 1.8rem;
 }

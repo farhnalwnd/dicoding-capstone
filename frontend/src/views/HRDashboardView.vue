@@ -82,7 +82,7 @@
       <div class="empty-state">
         <h3>No Recruitment Data Available</h3>
         <p>There are no candidates uploaded or matching the selected filters. Please upload resumes in the Bulk CV Ranking page first.</p>
-        <router-link to="/hr/rank" class="btn-primary btn-link-rank">Go to Bulk CV Ranking</router-link>
+        <router-link to="/hr/rank-cv" class="btn-primary btn-link-rank">Go to Rank CV</router-link>
       </div>
     </div>
 

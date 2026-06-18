@@ -122,5 +122,5 @@ def build_match_explanation(
     # Record the final match score in Prometheus
     from app.core.metrics import MATCH_SCORE_DISTRIBUTION
     MATCH_SCORE_DISTRIBUTION.observe(final_score)
-    
+
     return result

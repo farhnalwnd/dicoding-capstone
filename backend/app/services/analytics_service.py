@@ -21,6 +21,7 @@ ACTION_LABEL_MAP = {
     "rejected": "Rejection Decisions"
 }
 
+
 def parse_iso_date(date_str: str) -> Optional[datetime]:
     try:
         # Try parsing standard ISO format
@@ -32,24 +33,26 @@ def parse_iso_date(date_str: str) -> Optional[datetime]:
         except Exception:
             return None
 
-def build_filter_query(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> Dict[str, Any]:
+
+def build_filter_query(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> Dict[str, Any]:  # noqa: E501
     query = {}
-    
+
     # Domain filter
     if domain and domain.strip() and domain.lower() != "all":
         query["domain"] = domain.strip()
-        
+
     # Date filter on created_at
     date_query = {}
     if start_date:
         date_query["$gte"] = start_date
     if end_date:
         date_query["$lte"] = end_date
-        
+
     if date_query:
         query["created_at"] = date_query
-        
+
     return query
+
 
 def _build_period_query(
     query_base: Dict[str, Any],
@@ -80,10 +83,23 @@ def _build_period_query(
 
 
 def _format_trend_percentage(curr_count: int, prev_count: int) -> str:
-    """Format a trend percentage string from two period counts."""
+    """Format a trend percentage string from two period counts.
+    
+    - If previous period had 0 records and current has some, return 'New'
+      (avoids misleading +14800% style numbers).
+    - Caps displayed percentage at ±999% to keep UI readable.
+    - Returns '0%' if both periods are zero.
+    """
     if prev_count == 0:
-        return f"+{curr_count * PERCENTAGE_MULTIPLIER}%" if curr_count > 0 else "0%"
+        if curr_count == 0:
+            return "0%"
+        return "New"   # First time data appears — cleaner than +∞%
+
     diff_pct = int(((curr_count - prev_count) / prev_count) * PERCENTAGE_MULTIPLIER)
+
+    # Cap to ±999 so the UI never shows absurdly large percentages
+    diff_pct = max(-999, min(999, diff_pct))
+
     if diff_pct >= 0:
         return f"+{diff_pct}%"
     return f"{diff_pct}%"
@@ -111,28 +127,29 @@ def calculate_trend(status: str, query_base: Dict[str, Any]) -> str:
 
     return _format_trend_percentage(curr_count, prev_count)
 
-def get_recruitment_stats(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> Dict[str, Any]:
+
+def get_recruitment_stats(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> Dict[str, Any]:  # noqa: E501
     candidates_col = get_candidates_collection()
     query = build_filter_query(start_date, end_date, domain)
-    
+
     total = candidates_col.count_documents(query)
-    
+
     statuses = ["screening", "talent_pool", "interview", "hired", "rejected"]
     stats_data = {"total": total}
     trends = {"total": calculate_trend("total", query)}
-    
+
     for s in statuses:
         s_query = query.copy()
         s_query["status"] = s
         stats_data[s] = candidates_col.count_documents(s_query)
         trends[s] = calculate_trend(s, query)
-        
+
     # Calculate score metrics across filtered candidates
     scores = [c["match_score"] for c in candidates_col.find(query, {"match_score": 1}) if "match_score" in c]
     avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
     highest_score = round(max(scores), 1) if scores else 0.0
     lowest_score = round(min(scores), 1) if scores else 0.0
-    
+
     return {
         "counts": {
             "total_candidates": total,
@@ -157,48 +174,54 @@ def get_recruitment_stats(start_date: Optional[str] = None, end_date: Optional[s
         }
     }
 
-def get_candidate_funnel(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:
+
+def get_candidate_funnel(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:  # noqa: E501
     candidates_col = get_candidates_collection()
     query = build_filter_query(start_date, end_date, domain)
-    
+
     # Funnel stages are cumulative:
     # 1. Applicants: Everyone
     # 2. Screening: Status in ['screening', 'talent_pool', 'interview', 'hired', 'rejected']
     # 3. Talent Pool: Status in ['talent_pool', 'interview', 'hired']
     # 4. Interview: Status in ['interview', 'hired']
     # 5. Hired: Status in ['hired']
-    
+
     q_all = query.copy()
     applicants = candidates_col.count_documents(q_all)
-    
+
     q_screening = query.copy()
     q_screening["status"] = {"$in": ["screening", "talent_pool", "interview", "hired", "rejected"]}
     screening = candidates_col.count_documents(q_screening)
-    
+
     q_tp = query.copy()
     q_tp["status"] = {"$in": ["talent_pool", "interview", "hired"]}
     talent_pool = candidates_col.count_documents(q_tp)
-    
+
     q_int = query.copy()
     q_int["status"] = {"$in": ["interview", "hired"]}
     interview = candidates_col.count_documents(q_int)
-    
+
     q_hired = query.copy()
     q_hired["status"] = "hired"
     hired = candidates_col.count_documents(q_hired)
-    
+
     return [
         {"stage": "Applicants", "count": applicants, "percentage": 100.0},
-        {"stage": "Screening", "count": screening, "percentage": round((screening / applicants * 100), 1) if applicants > 0 else 0.0},
-        {"stage": "Talent Pool", "count": talent_pool, "percentage": round((talent_pool / applicants * 100), 1) if applicants > 0 else 0.0},
-        {"stage": "Interview", "count": interview, "percentage": round((interview / applicants * 100), 1) if applicants > 0 else 0.0},
-        {"stage": "Hired", "count": hired, "percentage": round((hired / applicants * 100), 1) if applicants > 0 else 0.0}
+        {"stage": "Screening", "count": screening, "percentage": round(
+            (screening / applicants * 100), 1) if applicants > 0 else 0.0},
+        {"stage": "Talent Pool", "count": talent_pool, "percentage": round(
+            (talent_pool / applicants * 100), 1) if applicants > 0 else 0.0},
+        {"stage": "Interview", "count": interview, "percentage": round(
+            (interview / applicants * 100), 1) if applicants > 0 else 0.0},
+        {"stage": "Hired", "count": hired, "percentage": round(
+            (hired / applicants * 100), 1) if applicants > 0 else 0.0}
     ]
 
-def get_top_skills(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:
+
+def get_top_skills(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:  # noqa: E501
     candidates_col = get_candidates_collection()
     query = build_filter_query(start_date, end_date, domain)
-    
+
     pipeline = [
         {"$match": query},
         {
@@ -216,23 +239,24 @@ def get_top_skills(start_date: Optional[str] = None, end_date: Optional[str] = N
         {"$sort": {"count": -1}},
         {"$limit": TOP_SKILLS_LIMIT}
     ]
-    
+
     try:
         results = list(candidates_col.aggregate(pipeline))
         return [{"skill": r["_id"], "count": r["count"]} for r in results]
     except Exception:
         return []
 
-def get_job_categories(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:
+
+def get_job_categories(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:  # noqa: E501
     candidates_col = get_candidates_collection()
     query = build_filter_query(start_date, end_date, domain)
-    
+
     pipeline = [
         {"$match": query},
         {"$group": {"_id": "$domain", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ]
-    
+
     try:
         results = list(candidates_col.aggregate(pipeline))
         # Map domain code to label
@@ -250,6 +274,7 @@ def get_job_categories(start_date: Optional[str] = None, end_date: Optional[str]
         ]
     except Exception:
         return []
+
 
 def _build_activity_match_query(
     start_date: Optional[str],
@@ -317,7 +342,7 @@ def _format_timeline_results(results: List[Dict[str, Any]]) -> List[Dict[str, An
     return sorted(timeline_map.values(), key=lambda x: x["date"])
 
 
-def get_activity_timeline(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_activity_timeline(start_date: Optional[str] = None, end_date: Optional[str] = None, domain: Optional[str] = None) -> List[Dict[str, Any]]:  # noqa: E501
     activity_col = get_activity_collection()
     match_query = _build_activity_match_query(start_date, end_date, domain)
     pipeline = _build_activity_pipeline(match_query)

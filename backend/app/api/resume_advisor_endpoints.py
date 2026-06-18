@@ -6,6 +6,7 @@ from app.services.resume_advisor_service import generate_advisor_recommendations
 
 router = APIRouter()
 
+
 class ResumeAdvisorRequest(BaseModel):
     match_score: float = Field(..., description="The current similarity/match score")
     matched_skills: List[str] = Field(default=[], description="List of skills matched")
@@ -25,14 +26,17 @@ class ResumeAdvisorRequest(BaseModel):
         }
     }
 
+
 class LearningPlanItem(BaseModel):
     duration: str
     tasks: List[str]
+
 
 class CareerRecommendations(BaseModel):
     career_suitability: str
     recommended_roles: List[str]
     recommended_technologies: List[str]
+
 
 class ResumeAdvisorResponse(BaseModel):
     current_score: float
@@ -42,6 +46,7 @@ class ResumeAdvisorResponse(BaseModel):
     resume_tips: List[str]
     interview_tips: List[str]
     career_recommendations: CareerRecommendations
+
 
 @router.post("", response_model=ResumeAdvisorResponse)
 async def get_advisor_advice(
@@ -57,7 +62,7 @@ async def get_advisor_advice(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Only Job Seekers can access the Resume Advisor."
         )
-        
+
     result = generate_advisor_recommendations(
         match_score=payload.match_score,
         matched_skills=payload.matched_skills,
@@ -65,8 +70,9 @@ async def get_advisor_advice(
         recommendation=payload.recommendation,
         job_description=payload.job_description
     )
-    
+
     return result
+
 
 @router.post("/export")
 async def export_advisor_pdf_report(
@@ -82,7 +88,7 @@ async def export_advisor_pdf_report(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Only Job Seekers can export reports."
         )
-        
+
     try:
         pdf_bytes = generate_advisor_pdf(recommendations)
         return Response(

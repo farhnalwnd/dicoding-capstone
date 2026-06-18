@@ -1,10 +1,8 @@
 import re
 import os
-import math
 from sentence_transformers import SentenceTransformer, util
 from sklearn.cluster import KMeans
 from typing import List, Dict, Any, Tuple
-import numpy as np
 
 from app.services.explainability import (
     build_match_explanation
@@ -14,7 +12,7 @@ MODEL_MAIN = os.getenv("MODEL_MAIN", "paraphrase-multilingual-MiniLM-L12-v2")
 MODEL_BI_ENCODER = os.getenv("MODEL_BI_ENCODER", "paraphrase-multilingual-MiniLM-L12-v2")
 
 # Fallback: if local model path doesn't exist, use base HuggingFace model
-if MODEL_BI_ENCODER and not os.path.exists(MODEL_BI_ENCODER) and '/' in MODEL_BI_ENCODER and not MODEL_BI_ENCODER.startswith('sentence-transformers'):
+if MODEL_BI_ENCODER and not os.path.exists(MODEL_BI_ENCODER) and '/' in MODEL_BI_ENCODER and not MODEL_BI_ENCODER.startswith('sentence-transformers'):  # noqa: E501
     print(f"[NLP] Fine-tuned model not found at: {MODEL_BI_ENCODER}")
     print(f"[NLP] Falling back to: {MODEL_MAIN}")
     MODEL_BI_ENCODER = MODEL_MAIN
@@ -70,6 +68,7 @@ _ACTION_WORDS = frozenset({
 
 _skills_embeddings_cache: Dict[str, Any] = {}
 
+
 def get_skill_embeddings_for_skills(skills: List[str]):
     embeddings = {}
     for skill in skills:
@@ -88,7 +87,8 @@ def get_similarity_score(text1: str, text2: str) -> float:
 
     similarity = util.cos_sim(emb1, emb2).item()
     return round(max(0.0, min(1.0, similarity)) * MAX_SCORE_PERCENTAGE, 2)
-    
+
+
 def _compute_domain_relevance(cv_text: str, domain_skills: List[str]) -> float:
     """Compute what fraction of the domain's skill list appears in the CV."""
     if not domain_skills:
@@ -207,6 +207,7 @@ def extract_phrases(text: str) -> List[str]:
         p for p in valid_phrases if MIN_PHRASE_LENGTH <= len(p) < MAX_PHRASE_CHAR_LENGTH
     ))
 
+
 def normalize_skill_name(name: str) -> str:
     """
     Normalize skill name by converting to lowercase and stripping common suffixes
@@ -217,6 +218,7 @@ def normalize_skill_name(name: str) -> str:
     n = re.sub(r'(?:[\s.-]?framework|[\s.-]?library)$', '', n)
     return n.strip()
 
+
 def has_skill_exact(skill: str, text: str) -> bool:
     """
     Check if a skill is present in text as an exact word match (case-insensitive).
@@ -224,25 +226,25 @@ def has_skill_exact(skill: str, text: str) -> bool:
     Also performs soft exact matching for variations like Vue.js vs Vue, ReactJS vs React.
     """
     skill_norm = normalize_skill_name(skill)
-    
+
     # 1. Soft matching by tokenizing and normalizing each token in the text
     tokens = re.findall(r'\b[a-zA-Z0-9+#.-]+\b', text)
     for token in tokens:
         if normalize_skill_name(token) == skill_norm:
             return True
-            
+
     # 2. Fallback to standard exact regex matching (for multi-word skills like "Machine Learning")
     skill_lower = skill.lower().strip()
     text_lower = text.lower()
     escaped = re.escape(skill_lower)
-    
+
     pattern = ""
     if re.match(r'^\w', skill_lower):
         pattern += r'\b'
     pattern += escaped
     if re.search(r'\w$', skill_lower):
         pattern += r'\b'
-        
+
     return bool(re.search(pattern, text_lower))
 
 
@@ -251,6 +253,7 @@ def clean_skill_phrase(skill: str) -> str:
     s = re.sub(r'^[-\*•\s]+', '', skill)
     s = re.sub(r'[-\*•\s]+$', '', s)
     return s.strip()
+
 
 def _is_blacklisted_phrase(phrase_lower: str, words: List[str]) -> bool:
     """Return True if the phrase or its words hit any blacklist."""
@@ -291,8 +294,10 @@ def is_valid_skill(phrase: str, domain_skills: set[str]) -> bool:
 
     return True
 
+
 def _get_tokens(s: str) -> List[str]:
     return re.findall(r'[a-zA-Z0-9]+', s.lower())
+
 
 def _is_sublist(sub: List[str], lst: List[str]) -> bool:
     n, m = len(sub), len(lst)
@@ -300,6 +305,7 @@ def _is_sublist(sub: List[str], lst: List[str]) -> bool:
         if lst[i:i+n] == sub:
             return True
     return False
+
 
 def _resolve_sublist_conflict(
     idx_short: int, idx_long: int,
@@ -341,29 +347,30 @@ def deduplicate_skills(skills: List[str], domain_skills: List[str] = None) -> Li
 
     return [skills[i] for i in range(n) if i not in to_remove]
 
+
 def extract_jd_target_skills(jd_text: str, domain: str) -> List[str]:
     """
     Extract exact valid skills from JD text using the Master Skills list.
     This guarantees NO irrelevant skills (like "S1", "mampu bekerja") are extracted.
     """
     from app.core.domain_loader import get_master_skills, load_domain_config
-    
+
     master_skills = get_master_skills()
     config = load_domain_config(domain)
     domain_skills = config.get("skills", [])
-    
+
     target_skills = set()
-    
+
     # Check all master skills if they exist exactly in the JD text
     for skill in master_skills:
         if has_skill_exact(skill, jd_text):
             target_skills.add(skill)
-            
+
     # As a fallback, ensure any domain skills present in JD are included
     for skill in domain_skills:
         if has_skill_exact(skill, jd_text):
             target_skills.add(skill)
-            
+
     # HEAD normalization safety fallback
     NORMALIZATION_MAP = {
         "rest": "REST API",
@@ -387,8 +394,9 @@ def extract_jd_target_skills(jd_text: str, domain: str) -> List[str]:
         if has_skill_exact(var_name, jd_text):
             if norm_name in master_skills or norm_name in domain_skills:
                 target_skills.add(norm_name)
-            
+
     return list(target_skills)
+
 
 def _exact_match_skills(
     target_skills: List[str], cv_text: str,
@@ -437,7 +445,7 @@ def _semantic_match_skills(
     return matched, missing
 
 
-def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_target_skills: List[str] = None) -> Tuple[List[str], List[str], Dict[str, float]]:
+def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_target_skills: List[str] = None) -> Tuple[List[str], List[str], Dict[str, float]]:  # noqa: E501
     """
     Hybrid semantic matching using batch encoding for significant performance improvements.
     Uses precomputed target skills to avoid extracting JD phrases for every candidate.
@@ -449,7 +457,8 @@ def match_cv_jd_hybrid(cv_text: str, jd_text: str, domain: str, precomputed_targ
     threshold_direct = config.get("threshold_direct_match", DEFAULT_THRESHOLD_DIRECT)
     threshold_master = config.get("threshold_master_match", DEFAULT_THRESHOLD_MASTER)
 
-    target_skills = precomputed_target_skills if precomputed_target_skills is not None else extract_jd_target_skills(jd_text, domain)
+    target_skills = precomputed_target_skills if precomputed_target_skills is not None else extract_jd_target_skills(
+        jd_text, domain)
     if not target_skills:
         return [], [], {}
 
@@ -478,44 +487,43 @@ def cluster_documents(texts: List[str], filenames: List[str], num_clusters: int 
         return []
     if len(texts) < num_clusters:
         num_clusters = len(texts)
-        
+
     embeddings = model.encode(texts)
     kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
     kmeans.fit(embeddings)
-    
+
     labels = kmeans.labels_
-    
+
     clusters = {i: [] for i in range(num_clusters)}
     for idx, label in enumerate(labels):
         clusters[label].append({
             "filename": filenames[idx],
             "text": texts[idx]
         })
-        
+
     result = []
     for cluster_id, items in clusters.items():
         combined_text = " ".join([item["text"] for item in items])
         cluster_phrases = extract_phrases(combined_text)
-        
+
         if cluster_phrases:
             phrase_embs = model.encode(cluster_phrases[:CLUSTER_MAX_PHRASES], convert_to_tensor=True)
             cluster_skills = []
 
-            for skill_name, skill_emb in get_skill_embeddings_for_skills(domain_skills if 'domain_skills' in locals() else []).items():
+            for skill_name, skill_emb in get_skill_embeddings_for_skills([]).items():  # noqa: E501
                 similarities = util.cos_sim(skill_emb, phrase_embs)[0]
                 max_sim = similarities.max().item()
                 if max_sim > CLUSTER_SIMILARITY_THRESHOLD:
                     cluster_skills.append(skill_name)
-            
+
             suggested_label = " / ".join(cluster_skills[:3]) if cluster_skills else f"Cluster {cluster_id + 1}"
         else:
             suggested_label = f"Cluster {cluster_id + 1}"
-        
+
         result.append({
             "cluster_id": cluster_id,
             "suggested_label": suggested_label,
             "candidates": [item["filename"] for item in items]
         })
-        
-    return result
 
+    return result

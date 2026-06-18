@@ -7,7 +7,6 @@ from app.core.auth import require_role
 from app.core.file_validation import validate_upload_file, sanitize_filename
 import time
 import asyncio
-from sentence_transformers import util
 from bson import ObjectId
 from datetime import datetime, timezone
 
@@ -15,9 +14,6 @@ from app.services.parser import extract_text, extract_candidate_name, clean_text
 from app.services.nlp import (
     get_similarity_score,
     match_cv_jd_hybrid,
-    extract_phrases,
-    get_skill_embeddings_for_skills,
-    model,
     has_skill_exact,
     extract_jd_target_skills
 )
@@ -40,6 +36,7 @@ JOB_TITLE_MAX_LENGTH = 100
 _YEAR_PATTERN = re.compile(r'(\d+)\s*(?:\+\s*)?(?:years?|tahun|th)')
 
 router = APIRouter()
+
 
 class QuestionRequest(BaseModel):
     matched_skills: List[str]
@@ -170,10 +167,27 @@ def _extract_job_title(job_description: str) -> str:
 
 
 def _save_ranked_candidates(candidates: list, job_title: str, log_fn=None):
-    """Assign ranks, persist candidates to DB, and optionally log activity."""
+    """Assign ranks, persist candidates to DB, and optionally log activity.
+    
+    Duplicate detection: a candidate is considered a duplicate if the same
+    filename was already uploaded for the same job_title. Duplicates are
+    skipped (not re-inserted) and the existing document ID is reused.
+    """
     candidates_col = get_candidates_collection()
     for i, candidate in enumerate(candidates, start=1):
         candidate["rank"] = i
+
+        # --- Duplicate detection ---
+        existing = candidates_col.find_one({
+            "filename": candidate["filename"],
+            "job_title": job_title
+        })
+        if existing:
+            # Reuse the existing record — do not insert a duplicate
+            candidate["id"] = str(existing["_id"])
+            candidate["duplicate"] = True
+            continue
+        # --------------------------
 
         candidate_doc = {
             "candidate_name": candidate["name"],
@@ -194,6 +208,7 @@ def _save_ranked_candidates(candidates: list, job_title: str, log_fn=None):
 
         result = candidates_col.insert_one(candidate_doc)
         candidate["id"] = str(result.inserted_id)
+        candidate["duplicate"] = False
 
         if log_fn:
             log_fn(candidate, job_title)
@@ -257,7 +272,6 @@ async def rank_candidates(
         )
 
 
-
 # ==========================================
 # Real-Time SSE endpoints & Background Workers
 # ==========================================
@@ -267,30 +281,31 @@ def run_hr_rank_task(job_id: str, cv_files: List[Tuple[bytes, str]], job_descrip
         progress_manager.update_progress(job_id, 10, "Parsing CVs")
         jd_clean = clean_text(job_description)
         precomputed_target_skills = extract_jd_target_skills(jd_clean, domain)
-        
-        parsed_cvs = []
+
+        # Keep file_bytes alongside cv_text so PyMuPDF name extraction can run
+        parsed_cvs = []  # List of (cv_text, filename, file_bytes)
         for file_bytes, filename in cv_files:
             cv_text = extract_text(file_bytes, filename)
-            parsed_cvs.append((cv_text, filename))
+            parsed_cvs.append((cv_text, filename, file_bytes))
         time.sleep(0.3)
-        
+
         progress_manager.update_progress(job_id, 30, "Extracting Skills")
         candidates = []
-        for cv_text, filename in parsed_cvs:
-            candidate_name = extract_candidate_name(cv_text, filename)
+        for cv_text, filename, file_bytes in parsed_cvs:
+            candidate_name = extract_candidate_name(cv_text, filename, file_bytes)
             candidate = _process_single_candidate(
                 cv_text, filename, jd_clean, domain,
                 precomputed_target_skills, candidate_name
             )
             candidates.append(candidate)
         time.sleep(0.3)
-        
+
         progress_manager.update_progress(job_id, 50, "Embedding Generation")
         time.sleep(0.3)
-        
+
         progress_manager.update_progress(job_id, 75, "Ranking Candidates")
         candidates.sort(key=lambda x: x["score"], reverse=True)
-        
+
         job_title = _extract_job_title(job_description)
 
         def _log_candidate_activity(candidate, title):
@@ -319,7 +334,7 @@ async def start_rank_candidates(
 ):
     REQUEST_COUNT.labels(endpoint="hr_rank_start").inc()
     HR_RANKING_COUNT.inc()
-    
+
     cv_files = []
     for cv in cvs:
         await asyncio.sleep(0.01)
@@ -327,7 +342,7 @@ async def start_rank_candidates(
         validate_upload_file(cv.filename, file_bytes)
         safe_filename = sanitize_filename(cv.filename)
         cv_files.append((file_bytes, safe_filename))
-        
+
     job_id = progress_manager.create_job()
     background_tasks.add_task(
         run_hr_rank_task,
@@ -339,26 +354,43 @@ async def start_rank_candidates(
     return {"job_id": job_id}
 
 
+def _build_interview_questions(matched_skills: list, missing_skills: list) -> list:
+    """Generate exactly 3 short, simple interview questions in Indonesian.
+
+    Priority:
+      - Q1: based on top matched skill (candidate's strength)
+      - Q2: based on top missing skill (candidate's gap)
+      - Q3: generic motivation / adaptability question
+    Falls back to generic questions when skills lists are empty.
+    """
+    questions = []
+
+    # Q1 — strength (matched skill)
+    if matched_skills:
+        skill = matched_skills[0]
+        questions.append(f"Ceritakan pengalaman kamu menggunakan {skill} di pekerjaan atau proyek sebelumnya.")
+    else:
+        questions.append("Ceritakan proyek atau pengalaman kerja yang paling relevan dengan posisi ini.")
+
+    # Q2 — gap (missing skill)
+    if missing_skills:
+        skill = missing_skills[0]
+        questions.append(f"Posisi ini membutuhkan {skill}. Bagaimana cara kamu mempelajari atau mengatasinya?")
+    else:
+        questions.append("Apa skill baru yang sedang kamu pelajari dan bagaimana cara kamu mempelajarinya?")
+
+    # Q3 — generic motivation / fit
+    questions.append("Mengapa kamu tertarik dengan posisi ini dan apa yang membuat kamu cocok untuk peran tersebut?")
+
+    return questions  # always exactly 3
+
 
 @router.post("/hr/generate-questions")
 async def generate_interview_questions(
     req: QuestionRequest,
     current_user: dict = Depends(require_role("hr"))
 ):
-    questions = []
-    
-    for skill in req.matched_skills[:3]:
-        questions.append(f"You have experience with {skill}. Can you describe a challenging project where you successfully utilized it?")
-        questions.append(f"What were some of the common issues you faced when working with {skill}, and how did you resolve them?")
-        
-    for skill in req.missing_skills[:3]:
-        questions.append(f"The role requires familiarity with {skill}, which isn't prominent in your CV. How would you approach learning or applying it?")
-        questions.append(f"Have you worked with any technologies or concepts similar to {skill}?")
-        
-    if not questions:
-        questions.append("Can you walk me through your most recent relevant project?")
-        questions.append("How do you handle learning new technologies on the job?")
-        
+    questions = _build_interview_questions(req.matched_skills, req.missing_skills)
     return {"questions": questions}
 
 
@@ -399,38 +431,38 @@ async def update_candidate_status(
         obj_id = ObjectId(id)
     except Exception:
         raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail="Invalid candidate ID format")
-        
+
     candidates_col = get_candidates_collection()
     candidate = candidates_col.find_one({"_id": obj_id})
     if not candidate:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Candidate not found")
-        
-    result = candidates_col.update_one(
+
+    candidates_col.update_one(
         {"_id": obj_id},
         {"$set": {"status": status_update.status}}
     )
-    
+
     log_activity(
         candidate_id=id,
         candidate_name=candidate.get("candidate_name", "Unknown"),
         action=status_update.status,
         details=f"Status updated from {candidate.get('status', 'unknown')} to {status_update.status}"
     )
-    
+
     return {"status": "success", "message": f"Candidate status updated to {status_update.status}"}
 
 
 @router.get("/dashboard/hr-stats")
 async def get_hr_stats(current_user: dict = Depends(require_role("hr"))):
     candidates_col = get_candidates_collection()
-    
+
     total = candidates_col.count_documents({})
     screening = candidates_col.count_documents({"status": "screening"})
     talent_pool = candidates_col.count_documents({"status": "talent_pool"})
     interview = candidates_col.count_documents({"status": "interview"})
     rejected = candidates_col.count_documents({"status": "rejected"})
     hired = candidates_col.count_documents({"status": "hired"})
-    
+
     return {
         "total_candidates": total,
         "screening": screening,
@@ -469,13 +501,14 @@ async def schedule_candidate_interview(
         obj_id = ObjectId(id)
     except Exception:
         raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail="Invalid candidate ID format")
-        
+
     candidates_col = get_candidates_collection()
     candidate = candidates_col.find_one({"_id": obj_id, "status": "interview"})
     if not candidate:
-        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Candidate not found or status is not 'interview'")
-        
-    result = candidates_col.update_one(
+        raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND,
+                            detail="Candidate not found or status is not 'interview'")
+
+    candidates_col.update_one(
         {"_id": obj_id, "status": "interview"},
         {
             "$set": {
@@ -486,14 +519,14 @@ async def schedule_candidate_interview(
             }
         }
     )
-    
+
     log_activity(
         candidate_id=id,
         candidate_name=candidate.get("candidate_name", "Unknown"),
         action="interview_scheduled",
         details=f"Interview scheduled for {req.date} at {req.time}. Meeting link: {req.meeting_link}"
     )
-    
+
     return {"status": "success", "message": "Interview scheduled successfully"}
 
 
@@ -506,34 +539,20 @@ async def generate_candidate_questions(
         obj_id = ObjectId(id)
     except Exception:
         raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail="Invalid candidate ID format")
-        
+
     candidates_col = get_candidates_collection()
     candidate = candidates_col.find_one({"_id": obj_id})
     if not candidate:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Candidate not found")
-        
+
     matched_skills = candidate.get("matched_skills", [])
     missing_skills = candidate.get("missing_skills", [])
-    
-    questions = []
-    for skill in matched_skills[:3]:
-        questions.append(f"You have experience with {skill}. Can you describe a challenging project where you successfully utilized it?")
-        questions.append(f"What were some of the common issues you faced when working with {skill}, and how did you resolve them?")
-        
-    for skill in missing_skills[:3]:
-        questions.append(f"The role requires familiarity with {skill}, which isn't prominent in your CV. How would you approach learning or applying it?")
-        questions.append(f"Have you worked with any technologies or concepts similar to {skill}?")
-        
-    if not questions:
-        questions.append("Can you walk me through your most recent relevant project?")
-        questions.append("How do you handle learning new technologies on the job?")
-        
+
+    questions = _build_interview_questions(matched_skills, missing_skills)
+
     candidates_col.update_one(
         {"_id": obj_id},
         {"$set": {"interview_questions": questions}}
     )
-    
+
     return {"questions": questions}
-
-
-

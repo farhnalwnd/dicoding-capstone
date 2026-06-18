@@ -1,3 +1,4 @@
+import re
 """
 Admin Service — Business logic for Admin Control Center.
 Handles platform stats, user management, audit logs, system health, and AI usage metrics.

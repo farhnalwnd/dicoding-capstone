@@ -6,11 +6,12 @@
       </div>
       
       <div class="trend-badge" :class="trendClass" v-if="trend && trend !== '0%'">
-        <span class="trend-arrow">{{ isPositiveTrend ? '▲' : '▼' }}</span>
+        <span class="trend-arrow" v-if="!isNewTrend">{{ isPositiveTrend ? '▲' : '▼' }}</span>
+        <span class="trend-arrow" v-else>✦</span>
         <span class="trend-text">{{ trend }}</span>
       </div>
       <div class="trend-badge trend-neutral" v-else>
-        <span class="trend-text">0%</span>
+        <span class="trend-text">–</span>
       </div>
     </div>
 
@@ -47,6 +48,8 @@ const props = defineProps({
   }
 })
 
+const isNewTrend = computed(() => props.trend === 'New')
+
 const isPositiveTrend = computed(() => {
   return props.trend && props.trend.startsWith('+')
 })
@@ -60,6 +63,7 @@ const iconBgClass = computed(() => {
 })
 
 const trendClass = computed(() => {
+  if (isNewTrend.value) return 'trend-new'
   return isPositiveTrend.value ? 'trend-up' : 'trend-down'
 })
 </script>
@@ -162,6 +166,12 @@ const trendClass = computed(() => {
   background-color: rgba(148, 163, 184, 0.1);
   color: #64748B;
   border-color: rgba(148, 163, 184, 0.2);
+}
+
+.trend-new {
+  background-color: rgba(14, 165, 164, 0.08);
+  color: var(--accent);
+  border-color: rgba(14, 165, 164, 0.2);
 }
 
 /* Details */

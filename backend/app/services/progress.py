@@ -1,6 +1,7 @@
 import uuid
 from typing import Dict, Any, Optional
 
+
 class JobProgressManager:
     def __init__(self):
         # Maps job_id -> { "progress": int, "message": str, "status": str, "result": Any }
@@ -37,6 +38,7 @@ class JobProgressManager:
 
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         return self._jobs.get(job_id)
+
 
 # Global singleton instance
 progress_manager = JobProgressManager()

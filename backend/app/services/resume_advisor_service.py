@@ -1,6 +1,5 @@
 import os
 import json
-import time
 import requests
 import fitz
 from typing import List, Dict
@@ -27,6 +26,7 @@ FRONTEND_SKILLS = ["vue", "react", "html", "css", "javascript"]
 
 GEMINI_REQUEST_TIMEOUT = 15
 
+
 def _build_gemini_prompt(
     match_score: float,
     matched_skills: List[str],
@@ -36,16 +36,16 @@ def _build_gemini_prompt(
 ) -> str:
     """Build the Gemini API prompt for resume advisor analysis."""
     return (
-        "You are an expert AI Resume Advisor. Analyze the candidate's CV matching details against the job description:\n"
+        "You are an expert AI Resume Advisor. Analyze the candidate's CV matching details against the job description:\n"  # noqa: E501
         f"Current Match Score: {match_score}%\n"
         f"Current Recommendation Level: {recommendation}\n"
         f"Matched Skills: {', '.join(matched_skills) if matched_skills else 'None'}\n"
         f"Missing Skills: {', '.join(missing_skills) if missing_skills else 'None'}\n"
         f"Job Description: {job_description}\n\n"
-        "Provide your analysis in JSON format ONLY with the following keys. Do not include markdown code block syntax (like ```json ... ```) in the response:\n"
+        "Provide your analysis in JSON format ONLY with the following keys. Do not include markdown code block syntax (like ```json ... ```) in the response:\n"  # noqa: E501
         "{\n"
         "  \"estimated_score\": <number, potential score after applying tips, e.g. 75.5>,\n"
-        "  \"missing_skills_summary\": \"<string, e.g. 'You are currently missing Docker, Kubernetes, and CI/CD experience.'>\",\n"
+        "  \"missing_skills_summary\": \"<string, e.g. 'You are currently missing Docker, Kubernetes, and CI/CD experience.'>\",\n"  # noqa: E501
         "  \"learning_plan\": [\n"
         "    {\n"
         "      \"duration\": \"<string, e.g. 'Week 1-2'>\",\n"
@@ -119,6 +119,7 @@ def generate_advisor_recommendations(
     # Mock fallback recommendations if API key is not present or calls fail
     return generate_mock_recommendations(match_score, matched_skills, missing_skills, job_description)
 
+
 def _build_missing_skills_summary(missing_skills: List[str]) -> str:
     """Build a human-readable summary of missing skills."""
     if missing_skills:
@@ -175,7 +176,7 @@ def _build_resume_tips(missing_skills: List[str]) -> List[str]:
     if missing_skills:
         return [
             f"Add quantified achievements or projects highlighting any exposure to {missing_skills[0]}.",
-            "Format work achievements using the STAR method (Situation, Task, Action, Result) focusing on efficiency gains.",
+            "Format work achievements using the STAR method (Situation, Task, Action, Result) focusing on efficiency gains.",  # noqa: E501
             "Highlight your capability with relevant modern technologies in your technical skills grid."
         ]
     return [
@@ -188,7 +189,7 @@ def _build_interview_tips(missing_skills: List[str]) -> List[str]:
     """Build interview preparation tips based on missing skills."""
     if not missing_skills:
         return [
-            "Prepare stories about resolving technical friction, architecture scaling, or cross-functional coordination.",
+            "Prepare stories about resolving technical friction, architecture scaling, or cross-functional coordination.",  # noqa: E501
             "Review domain system design questions to showcase top-tier engineering insights."
         ]
     tips = [
@@ -250,6 +251,7 @@ def generate_mock_recommendations(
         "career_recommendations": _build_career_recommendations(matched_skills)
     }
 
+
 def generate_advisor_pdf(rec: Dict) -> bytes:
     """
     Draw a clean, well-formatted PDF report from Advisor recommendations using PyMuPDF (fitz).
@@ -264,7 +266,7 @@ def generate_advisor_pdf(rec: Dict) -> bytes:
     bottom_margin = PDF_BOTTOM_MARGIN
 
     y = top_margin
-    
+
     def add_page_if_needed(current_y, size=50):
         nonlocal page, y
         if current_y > bottom_margin - size:
@@ -272,15 +274,14 @@ def generate_advisor_pdf(rec: Dict) -> bytes:
             y = top_margin
             return True
         return False
-        
+
     # Parameters: text, start_x, start_y, font_size, font_name, color, is_bold (grouped as content + style)
     def draw_text_wrapped(text, start_x, start_y, font_size=10, font_name="helv", color=(0.1, 0.1, 0.1), is_bold=False):
-        nonlocal page
         words = text.split(" ")
         lines = []
         current_line = []
         max_chars = int((right_margin - start_x) / (0.52 * font_size))
-        
+
         for word in words:
             current_len = sum(len(w) + 1 for w in current_line) + len(word)
             if current_len > max_chars:
@@ -290,21 +291,23 @@ def generate_advisor_pdf(rec: Dict) -> bytes:
                 current_line.append(word)
         if current_line:
             lines.append(" ".join(current_line))
-            
+
         y_pos = start_y
         font_style = "helv"
-        
+
         for line in lines:
             add_page_if_needed(y_pos, font_size * 2)
             page.insert_text((start_x, y_pos), line, fontsize=font_size, fontname=font_style, color=color)
             y_pos += font_size * 1.45
-            
+
         return y_pos
-        
+
     # Title Header
-    page.insert_text((left_margin, y), "AI RESUME ADVISOR REPORT", fontsize=18, fontname="helv", color=(0.02, 0.35, 0.52))
+    page.insert_text((left_margin, y), "AI RESUME ADVISOR REPORT",
+                     fontsize=18, fontname="helv", color=(0.02, 0.35, 0.52))
     y += 15
-    page.insert_text((left_margin, y), "Personalized Career Analysis and Skills Roadmap", fontsize=10, fontname="helv", color=(0.4, 0.4, 0.4))
+    page.insert_text((left_margin, y), "Personalized Career Analysis and Skills Roadmap",
+                     fontsize=10, fontname="helv", color=(0.4, 0.4, 0.4))
     y += 40
 
     # Section 1: Overview
@@ -330,7 +333,8 @@ def generate_advisor_pdf(rec: Dict) -> bytes:
     # Section 3: Roadmap
     add_page_if_needed(y, 60)
     page.draw_rect(fitz.Rect(left_margin, y - 12, right_margin, y + 5), color=(0.9, 0.9, 0.9), fill=(0.9, 0.9, 0.9))
-    page.insert_text((left_margin, y), "3. Week-by-Week Learning Roadmap", fontsize=12, fontname="helv", color=(0.02, 0.35, 0.52))
+    page.insert_text((left_margin, y), "3. Week-by-Week Learning Roadmap",
+                     fontsize=12, fontname="helv", color=(0.02, 0.35, 0.52))
     y += 20
 
     for plan in rec.get("learning_plan", []):
@@ -343,9 +347,10 @@ def generate_advisor_pdf(rec: Dict) -> bytes:
     # Section 4: Tips
     add_page_if_needed(y, 60)
     page.draw_rect(fitz.Rect(left_margin, y - 12, right_margin, y + 5), color=(0.9, 0.9, 0.9), fill=(0.9, 0.9, 0.9))
-    page.insert_text((left_margin, y), "4. Actionable Improvements & Interview Tips", fontsize=12, fontname="helv", color=(0.02, 0.35, 0.52))
+    page.insert_text((left_margin, y), "4. Actionable Improvements & Interview Tips",
+                     fontsize=12, fontname="helv", color=(0.02, 0.35, 0.52))
     y += 20
-    
+
     y = draw_text_wrapped("Resume Optimizations:", left_margin, y, 10.5, "helv")
     for tip in rec.get("resume_tips", []):
         y = draw_text_wrapped(f"  • {tip}", left_margin + 10, y, 9.5, "helv")
@@ -361,18 +366,19 @@ def generate_advisor_pdf(rec: Dict) -> bytes:
     page.draw_rect(fitz.Rect(left_margin, y - 12, right_margin, y + 5), color=(0.9, 0.9, 0.9), fill=(0.9, 0.9, 0.9))
     page.insert_text((left_margin, y), "5. AI Career Insights", fontsize=12, fontname="helv", color=(0.02, 0.35, 0.52))
     y += 18
-    
+
     career = rec.get("career_recommendations", {})
     suitability = career.get("career_suitability", "Suitable for modern engineering tracks.")
     y = draw_text_wrapped(suitability, left_margin, y, 10, "helv")
     y += 5
-    
+
     roles = career.get("recommended_roles", [])
     if roles:
         y = draw_text_wrapped(f"Recommended Roles: {', '.join(roles)}", left_margin + 15, y, font_size=10, is_bold=True)
-        
+
     techs = career.get("recommended_technologies", [])
     if techs:
-        y = draw_text_wrapped(f"Recommended Technologies: {', '.join(techs)}", left_margin + 15, y, font_size=10, is_bold=True, color=(0.02, 0.35, 0.52))
-        
+        y = draw_text_wrapped(f"Recommended Technologies: {', '.join(techs)}",
+                              left_margin + 15, y, font_size=10, is_bold=True, color=(0.02, 0.35, 0.52))
+
     return doc.write()

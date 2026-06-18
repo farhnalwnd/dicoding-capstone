@@ -4,11 +4,13 @@ from app.core.auth import get_current_user
 
 router = APIRouter()
 
+
 @router.get("/jobs")
 def get_jobs(current_user: dict = Depends(get_current_user)):
     collection = get_jobs_collection()
-    jobs = list(collection.find({}, {"_id": 0, "title": 1, "company": 1, "location": 1, "url": 1, "keyword_searched": 1}))
+    jobs = list(collection.find({}, {"_id": 0, "title": 1, "company": 1, "location": 1, "url": 1, "keyword_searched": 1}))  # noqa: E501
     return {"items": jobs, "total": len(jobs)}
+
 
 @router.delete("/jobs/clear")
 def clear_jobs(current_user: dict = Depends(get_current_user)):

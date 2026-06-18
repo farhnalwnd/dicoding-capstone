@@ -13,6 +13,7 @@ import os
 
 app = FastAPI(title="HIREZY API", docs_url=None)
 
+
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
     return get_swagger_ui_html(
@@ -52,9 +53,11 @@ app.include_router(analytics_router, prefix="/api")
 app.include_router(resume_advisor_router, prefix="/api/resume-advisor")
 app.include_router(admin_router, prefix="/api/admin")
 
+
 @app.get("/")
 def read_root():
     return {"status": "ok"}
+
 
 @app.get("/api/model-info")
 def get_model_info():

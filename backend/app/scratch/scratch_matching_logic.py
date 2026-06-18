@@ -1,3 +1,5 @@
+from app.services.nlp import model, match_cv_jd_hybrid
+from sentence_transformers import util
 import os
 import sys
 
@@ -12,23 +14,20 @@ if "MODEL_BI_ENCODER" not in os.environ or not os.environ["MODEL_BI_ENCODER"]:
 print(f"MODEL_BI_ENCODER path: {os.environ.get('MODEL_BI_ENCODER')}")
 
 print("Initializing NLP models...")
-from app.services.nlp import get_similarity_score, match_cv_jd_hybrid
 
 # Sample test inputs
-cv_text = "I am a backend developer. Experieced in Python development, Docker, and PostgreSQL database. Also familiar with Vue."
-jd_text = "Looking for a Python Developer. Requirements: Python, PostgreSQL, and Vue.js. Experience with Kubernetes is a plus."
+cv_text = "I am a backend developer. Experieced in Python development, Docker, and PostgreSQL database. Also familiar with Vue."  # noqa: E501
+jd_text = "Looking for a Python Developer. Requirements: Python, PostgreSQL, and Vue.js. Experience with Kubernetes is a plus."  # noqa: E501
 domain = "it"
 
 print("\n--- Running Similarity Score Test (MATCHING CASE) ---")
 # Bi-Encoder Score
-from sentence_transformers import util
-from app.services.nlp import model
 emb_cv = model.encode(cv_text, convert_to_tensor=True)
 emb_jd = model.encode(jd_text, convert_to_tensor=True)
 score_be = round(max(0.0, min(1.0, util.cos_sim(emb_cv, emb_jd).item())) * 100, 2)
 print(f"Calculated Match Score (Bi-Encoder): {score_be}%")
 
-cv_non_matching = "I am a creative graphic designer and artist. Experienced in Photoshop, Illustrator, Figma, and painting. I design flyers and posters."
+cv_non_matching = "I am a creative graphic designer and artist. Experienced in Photoshop, Illustrator, Figma, and painting. I design flyers and posters."  # noqa: E501
 print("\n--- Running Similarity Score Test (NON-MATCHING CASE) ---")
 emb_cv_non = model.encode(cv_non_matching, convert_to_tensor=True)
 score_non_be = round(max(0.0, min(1.0, util.cos_sim(emb_cv_non, emb_jd).item())) * 100, 2)

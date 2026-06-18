@@ -6,11 +6,13 @@
 
     <nav v-if="showNavbar" class="navbar">
       <div class="nav-inner">
+        <!-- Brand -->
         <router-link to="/" class="nav-brand" @click="closeMenus">
           <img class="brand-icon" src="/hirezy-logo.png" alt="HIREZY logo" />
           <span class="brand-text">HIREZY</span>
         </router-link>
 
+        <!-- Hamburger for mobile -->
         <button
           class="menu-toggle"
           :class="{ 'is-open': isMobileMenuOpen }"
@@ -25,77 +27,58 @@
         </button>
 
         <div class="nav-links" :class="{ 'is-open': isMobileMenuOpen }">
-          <router-link
-            to="/"
-            class="nav-link"
-            exact-active-class="is-active"
-            @click="closeMenus"
-          >
-            Home
-          </router-link>
 
-          <router-link
-            v-if="isLoggedIn"
-            to="/dashboard"
-            class="nav-link"
-            active-class="is-active"
-            @click="closeMenus"
-          >
-            Dashboard
-          </router-link>
+          <!-- === JOB SEEKER flat links === -->
+          <template v-if="isLoggedIn && isJobSeekerRole">
+            <router-link
+              to="/jobseeker/analyze"
+              class="nav-link"
+              active-class="is-active"
+              @click="closeMenus"
+            >Check Resume</router-link>
+            <router-link
+              to="/jobseeker/scrape"
+              class="nav-link"
+              active-class="is-active"
+              @click="closeMenus"
+            >Job Scraper</router-link>
+            <router-link
+              to="/resume-advisor"
+              class="nav-link"
+              active-class="is-active"
+              @click="closeMenus"
+            >AI Resume Advisor</router-link>
+          </template>
 
-          <div v-if="isLoggedIn && isJobSeekerRole" class="dropdown" :class="{ 'is-open': openDropdown === 'jobseeker' }">
-            <button
-              class="dropdown-btn"
-              :class="{ 'is-active': isJobSeekerActive }"
-              type="button"
-              @click="toggleDropdown('jobseeker')"
-            >
-              <span>Job Seeker</span>
-              <span class="arrow">▾</span>
-            </button>
-            <div class="dropdown-content">
-              <router-link to="/jobseeker/analyze" active-class="is-active" @click="closeMenus">
-                CV-JD Analysis
-              </router-link>
-              <router-link to="/jobseeker/scrape" active-class="is-active" @click="closeMenus">
-                Job Scraper
-              </router-link>
-              <router-link to="/resume-advisor" active-class="is-active" @click="closeMenus">
-                AI Resume Advisor
-              </router-link>
-            </div>
-          </div>
+          <!-- === HR flat links === -->
+          <template v-if="isLoggedIn && isHr">
+            <router-link
+              to="/hr-dashboard"
+              class="nav-link"
+              active-class="is-active"
+              @click="closeMenus"
+            >HR Analytics</router-link>
+            <router-link
+              to="/hr/rank-cv"
+              class="nav-link"
+              active-class="is-active"
+              @click="closeMenus"
+            >Rank CV</router-link>
+            <router-link
+              to="/hr/talent-pool"
+              class="nav-link"
+              active-class="is-active"
+              @click="closeMenus"
+            >Talent Pool</router-link>
+            <router-link
+              to="/hr/interviews"
+              class="nav-link"
+              active-class="is-active"
+              @click="closeMenus"
+            >Interview Scheduler</router-link>
+          </template>
 
-          <div v-if="isLoggedIn && isHr" class="dropdown" :class="{ 'is-open': openDropdown === 'hr' }">
-            <button
-              class="dropdown-btn"
-              :class="{ 'is-active': isHrActive }"
-              type="button"
-              @click="toggleDropdown('hr')"
-            >
-              <span>HR Panel</span>
-              <span class="arrow">▾</span>
-            </button>
-            <div class="dropdown-content">
-              <router-link to="/hr/rank" active-class="is-active" @click="closeMenus">
-                Bulk CV Ranking
-              </router-link>
-              <router-link to="/hr/search" active-class="is-active" @click="closeMenus">
-                Talent Search
-              </router-link>
-              <router-link to="/hr/talent-pool" active-class="is-active" @click="closeMenus">
-                Talent Pool
-              </router-link>
-              <router-link to="/hr/interviews" active-class="is-active" @click="closeMenus">
-                Interview Scheduler
-              </router-link>
-              <router-link to="/hr-dashboard" active-class="is-active" @click="closeMenus">
-                HR Analytics
-              </router-link>
-            </div>
-          </div>
-          <!-- Admin Panel Dropdown -->
+          <!-- === Admin dropdown (keep as dropdown — more items) === -->
           <div v-if="isLoggedIn && isAdminRole" class="dropdown" :class="{ 'is-open': openDropdown === 'admin' }">
             <button
               class="dropdown-btn admin-dropdown-btn"
@@ -106,15 +89,13 @@
               <span class="arrow">▾</span>
             </button>
             <div class="dropdown-content">
-              <router-link to="/admin" active-class="is-active" @click="closeMenus">
-                Overview
-              </router-link>
-              <router-link to="/admin/users" active-class="is-active" @click="closeMenus">
-                User Management
-              </router-link>
+              <router-link to="/admin" active-class="is-active" @click="closeMenus">Overview</router-link>
+              <router-link to="/admin/users" active-class="is-active" @click="closeMenus">User Management</router-link>
             </div>
           </div>
 
+          <!-- Spacer -->
+          <div class="nav-spacer"></div>
 
           <!-- Theme Toggle -->
           <button
@@ -122,28 +103,23 @@
             type="button"
             @click="toggleTheme"
             aria-label="Toggle Dark Mode"
-          >
-            {{ isDarkMode ? '🌙' : '☀️' }}
-          </button>
+          >{{ isDarkMode ? '🌙' : '☀️' }}</button>
 
+          <!-- Guest buttons -->
           <router-link
             v-if="!isLoggedIn"
             to="/login"
             class="nav-link nav-btn-login"
             @click="closeMenus"
-          >
-            Login
-          </router-link>
+          >Login</router-link>
           <router-link
             v-if="!isLoggedIn"
             to="/register"
             class="nav-btn-register"
             @click="closeMenus"
-          >
-            Register
-          </router-link>
+          >Register</router-link>
 
-          <!-- Authenticated User Dropdown Menu -->
+          <!-- User avatar dropdown -->
           <div v-if="isLoggedIn" class="dropdown user-dropdown" :class="{ 'is-open': openDropdown === 'user' }">
             <button
               class="dropdown-btn user-profile-btn"
@@ -157,7 +133,7 @@
             <div class="dropdown-content user-dropdown-content">
               <div class="user-info-header">
                 <p class="header-name">{{ userName }}</p>
-                <p class="header-role">{{ isHr ? 'HR Recruiter' : 'Job Seeker' }}</p>
+                <p class="header-role">{{ isHr ? 'HR Recruiter' : isJobSeekerRole ? 'Job Seeker' : 'Admin' }}</p>
               </div>
               <button class="dropdown-logout-btn" @click="handleLogout">
                 <span class="logout-icon">🚪</span> Logout
@@ -169,7 +145,7 @@
       </div>
     </nav>
 
-    <main class="main-content">
+    <main class="main-content" :class="{ 'landing-main': isLandingPage }">
       <router-view />
     </main>
   </div>
@@ -212,6 +188,8 @@ const userInitial = computed(() => userName.value.charAt(0).toUpperCase())
 const showNavbar = computed(() => {
   return route.path !== '/login' && route.path !== '/register'
 })
+
+const isLandingPage = computed(() => route.path === '/')
 
 function handleLogout() {
   closeMenus()
@@ -446,7 +424,10 @@ p  { margin: 0; }
 .nav-links {
   display: flex; align-items: center;
   justify-content: flex-end; gap: 0.15rem;
+  flex: 1;
 }
+
+.nav-spacer { flex: 1; }
 
 .nav-link,
 .dropdown-btn {
@@ -550,6 +531,9 @@ p  { margin: 0; }
 .main-content {
   flex: 1; padding: 2rem 1.5rem;
   max-width: 1280px; margin: 0 auto; width: 100%;
+}
+.landing-main {
+  padding-left: 0; padding-right: 0; max-width: 100%;
 }
 .view-container { margin: 0 auto; padding: 2rem; max-width: 1200px; }
 
@@ -717,15 +701,16 @@ select.input-field {
   .menu-toggle { display: inline-flex; }
   .nav-links {
     display: none; width: 100%; flex-direction: column;
-    align-items: stretch; gap: 0.2rem; padding: 0.4rem 0 0.25rem;
+    align-items: stretch; gap: 0.25rem; padding: 0.5rem 0 0.35rem;
   }
   .nav-links.is-open { display: flex; }
   .nav-link,
   .dropdown-btn {
-    width: 100%; justify-content: space-between;
+    width: 100%; justify-content: flex-start;
     padding: 0.65rem 0.85rem;
     background: var(--surface-2); border-radius: var(--radius-sm);
   }
+  .nav-spacer { display: none; }
   .dropdown { width: 100%; }
   .dropdown-content {
     position: static; width: 100%; min-width: 0;

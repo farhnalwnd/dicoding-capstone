@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import LandingPage from '../views/LandingPage.vue'
+import JobSeekerDashboard from '../views/JobSeekerDashboard.vue'
 import ScrapeView from '../views/ScrapeView.vue'
 import AnalyzeView from '../views/AnalyzeView.vue'
 import HRRankView from '../views/HRRankView.vue'
@@ -17,14 +18,14 @@ import { authState } from '../stores/auth'
 
 const routes = [
   // Public Routes
-  { path: '/', component: HomeView, meta: { title: 'Home' } },
+  { path: '/', component: LandingPage, meta: { title: 'Home' } },
   { path: '/login', component: LoginView, meta: { title: 'Login' } },
   { path: '/register', component: RegisterView, meta: { title: 'Register' } },
 
   // Protected Dashboard
   { 
     path: '/dashboard', 
-    component: DashboardView, 
+    component: JobSeekerDashboard, 
     meta: { 
       title: 'Dashboard',
       requiresAuth: true,
@@ -46,7 +47,7 @@ const routes = [
     path: '/jobseeker/analyze', 
     component: AnalyzeView, 
     meta: { 
-      title: 'CV-JD Analysis',
+      title: 'Check Resume',
       requiresAuth: true,
       roles: ['jobseeker']
     } 
@@ -72,10 +73,10 @@ const routes = [
 
   // HR Routes (Protected)
   { 
-    path: '/hr/rank', 
+    path: '/hr/rank-cv', 
     component: HRRankView, 
     meta: { 
-      title: 'Bulk CV Ranking',
+      title: 'Rank CV',
       requiresAuth: true,
       roles: ['hr']
     } 
