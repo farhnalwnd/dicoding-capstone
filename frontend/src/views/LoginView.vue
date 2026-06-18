@@ -88,13 +88,7 @@
         </button>
       </form>
 
-      <div class="divider">
-        <span>or</span>
-      </div>
 
-      <div class="google-auth-wrapper">
-        <div ref="googleBtn" class="google-btn-container"></div>
-      </div>
 
       <div class="auth-footer">
         <p>Don't have an account? <router-link to="/register">Register here</router-link></p>
@@ -104,9 +98,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, inject } from 'vue'
+import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, loginWithGoogle, setRole } from '../stores/auth'
+import { login, setRole } from '../stores/auth'
 
 const router = useRouter()
 const toast = inject('toast')
@@ -115,7 +109,6 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref(null)
-const googleBtn = ref(null)
 
 // Role selection state
 const showRoleSelection = ref(false)
@@ -144,25 +137,6 @@ async function handleLogin() {
   }
 }
 
-async function handleGoogleCallback(response) {
-  loading.value = true
-  error.value = null
-  try {
-    const result = await loginWithGoogle(response.credential)
-    if (result.needs_role_selection) {
-      showRoleSelection.value = true
-    } else {
-      toast?.success(`Welcome, ${result.user.name}!`)
-      router.push(getRedirectByRole(result.user.role))
-    }
-  } catch (err) {
-    error.value = err.message || 'Google authentication failed.'
-    toast?.error(error.value)
-  } finally {
-    loading.value = false
-  }
-}
-
 async function handleRoleSelect() {
   if (!selectedRole.value) return
   roleLoading.value = true
@@ -178,36 +152,6 @@ async function handleRoleSelect() {
     roleLoading.value = false
   }
 }
-
-function initGoogleSignIn() {
-  if (window.google) {
-    try {
-      window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
-        callback: handleGoogleCallback,
-        auto_select: false
-      })
-      window.google.accounts.id.renderButton(googleBtn.value, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        shape: 'pill',
-        logo_alignment: 'left',
-        width: '320'
-      })
-    } catch (e) {
-      console.warn('Failed to initialize Google Sign-In client:', e)
-    }
-  } else {
-    // Retry loading Google script in case of slow connections
-    setTimeout(initGoogleSignIn, 1000)
-  }
-}
-
-onMounted(() => {
-  initGoogleSignIn()
-})
 </script>
 
 <style scoped>
@@ -265,41 +209,6 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  color: var(--text-muted);
-  margin: 1.5rem 0;
-  font-size: 0.88rem;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid rgba(14, 116, 144, 0.14);
-}
-
-.divider:not(:empty)::before {
-  margin-right: .75em;
-}
-
-.divider:not(:empty)::after {
-  margin-left: .75em;
-}
-
-.google-auth-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.google-btn-container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
 
 .auth-footer {
   text-align: center;

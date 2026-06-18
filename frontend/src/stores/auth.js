@@ -91,34 +91,6 @@ export async function register(name, email, password, role) {
   }
 }
 
-export async function loginWithGoogle(credential) {
-  authState.loading = true
-  authState.error = null
-  authState.needsRoleSelection = false
-  try {
-    const response = await axios.post(`${API_BASE_URL}/api/auth/google`, {
-      credential
-    })
-    const { access_token, user, needs_role_selection } = response.data
-    authState.token = access_token
-    authState.user = user
-    localStorage.setItem('token', access_token)
-    localStorage.setItem('user', JSON.stringify(user))
-    setAuthHeader(access_token)
-
-    if (needs_role_selection) {
-      authState.needsRoleSelection = true
-    }
-
-    return { user, needs_role_selection }
-  } catch (err) {
-    const errMsg = err.message || err.response?.data?.detail || 'Google Sign-In failed.'
-    authState.error = errMsg
-    throw new Error(errMsg)
-  } finally {
-    authState.loading = false
-  }
-}
 
 export async function setRole(role) {
   authState.loading = true

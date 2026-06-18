@@ -4,7 +4,6 @@ import { API_BASE_URL } from '../config/api'
 
 const TOKEN_KEY = 'cvmatcher_jwt'
 const USER_KEY = 'cvmatcher_user'
-const THEME_KEY = 'hirezy_theme'
 
 // ── Shared reactive state (singleton across all consumers) ───────────────
 const token = ref(localStorage.getItem(TOKEN_KEY) || '')
@@ -13,22 +12,6 @@ const isNewUser = ref(false)
 
 const isAuthenticated = computed(() => !!token.value && !!user.value)
 const userRole = computed(() => user.value?.role || '')
-
-// ── Dark mode ────────────────────────────────────────────────────────────
-const isDarkMode = ref(localStorage.getItem(THEME_KEY) === 'dark')
-
-function applyTheme(dark) {
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-}
-
-function toggleDarkMode() {
-  isDarkMode.value = !isDarkMode.value
-  localStorage.setItem(THEME_KEY, isDarkMode.value ? 'dark' : 'light')
-  applyTheme(isDarkMode.value)
-}
-
-// Apply saved theme on load
-applyTheme(isDarkMode.value)
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 function persistSession(jwt, userData) {
@@ -48,24 +31,6 @@ function clearSession() {
 
 // ── Public API ───────────────────────────────────────────────────────────
 export function useAuth() {
-  /**
-   * Send the Google ID-token to the backend, receive an app JWT,
-   * and persist the session.
-   */
-  async function login(googleIdToken) {
-    const { data } = await axios.post(`${API_BASE_URL}/api/auth/google`, {
-      token: googleIdToken,
-    })
-    // Store is_new_user flag and role from backend response
-    isNewUser.value = !!data.is_new_user
-    const userData = { ...data.user }
-    if (data.role) {
-      userData.role = data.role
-    }
-    persistSession(data.access_token, userData)
-    return data
-  }
-
   /**
    * Set the user's role after initial registration.
    * Calls backend, updates localStorage, and refreshes the JWT.
@@ -110,12 +75,9 @@ export function useAuth() {
     token,
     userRole,
     isNewUser,
-    isDarkMode,
     // Methods
-    login,
     logout,
     setRole,
     getAuthHeaders,
-    toggleDarkMode,
   }
 }

@@ -97,14 +97,6 @@
           <!-- Spacer -->
           <div class="nav-spacer"></div>
 
-          <!-- Theme Toggle -->
-          <button
-            class="theme-toggle-btn"
-            type="button"
-            @click="toggleTheme"
-            aria-label="Toggle Dark Mode"
-          >{{ isDarkMode ? '🌙' : '☀️' }}</button>
-
           <!-- Guest buttons -->
           <router-link
             v-if="!isLoggedIn"
@@ -212,26 +204,6 @@ watch(currentPageTitle, (title) => {
 
 watch(() => route.fullPath, closeMenus)
 
-const isDarkMode = ref(false)
-
-function toggleTheme() {
-  isDarkMode.value = !isDarkMode.value
-  const theme = isDarkMode.value ? 'dark' : 'light'
-  localStorage.setItem('theme', theme)
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-  }
-}
-
-onMounted(() => {
-  const savedTheme = localStorage.getItem('theme')
-  if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    isDarkMode.value = true
-    document.documentElement.classList.add('dark')
-  }
-})
 </script>
 
 <style>
