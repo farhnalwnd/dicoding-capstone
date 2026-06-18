@@ -2,9 +2,9 @@ name: HIREZY CI/CD
 
 on:
   push:
-    branches: [main, develop, dev]
+    branches: [main, develop, dev, hirezy]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, hirezy]
 
 jobs:
   # === JOB 1: Lint ===
