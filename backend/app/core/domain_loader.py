@@ -1,6 +1,6 @@
 import json
 import os
-from typing import List, Dict
+from typing import Dict, List
 
 SKILLS_DIR = os.path.join(os.path.dirname(__file__), "skills")
 _available_domains = None

@@ -6,17 +6,17 @@ Handles user registration, login (email + Google OAuth), and user profile.
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from pymongo.errors import DuplicateKeyError
 
-from app.core.mongodb import get_users_collection
 from app.core.auth import (
-    hash_password,
-    verify_password,
     create_access_token,
     get_current_user,
+    hash_password,
+    verify_password,
 )
+from app.core.mongodb import get_users_collection
 
 router = APIRouter()
 
@@ -234,8 +234,8 @@ async def google_auth(data: GoogleAuthRequest):
     and creates or retrieves the user account.
     """
     try:
-        from google.oauth2 import id_token
         from google.auth.transport import requests as google_requests
+        from google.oauth2 import id_token
 
         idinfo = id_token.verify_oauth2_token(
             data.credential,

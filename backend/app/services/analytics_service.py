@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
-from typing import List, Dict, Any, Optional
-from app.core.mongodb import get_candidates_collection, get_activity_collection
+from typing import Any, Dict, List, Optional
+
+from app.core.mongodb import get_activity_collection, get_candidates_collection
 
 # Trend calculation constants
 TREND_CURRENT_DAYS = 7
@@ -241,30 +242,30 @@ def get_candidate_funnel(
         {
             "stage": "Screening",
             "count": screening,
-            "percentage": round((screening / applicants * 100), 1)
-            if applicants > 0
-            else 0.0,
+            "percentage": (
+                round((screening / applicants * 100), 1) if applicants > 0 else 0.0
+            ),
         },
         {
             "stage": "Talent Pool",
             "count": talent_pool,
-            "percentage": round((talent_pool / applicants * 100), 1)
-            if applicants > 0
-            else 0.0,
+            "percentage": (
+                round((talent_pool / applicants * 100), 1) if applicants > 0 else 0.0
+            ),
         },
         {
             "stage": "Interview",
             "count": interview,
-            "percentage": round((interview / applicants * 100), 1)
-            if applicants > 0
-            else 0.0,
+            "percentage": (
+                round((interview / applicants * 100), 1) if applicants > 0 else 0.0
+            ),
         },
         {
             "stage": "Hired",
             "count": hired,
-            "percentage": round((hired / applicants * 100), 1)
-            if applicants > 0
-            else 0.0,
+            "percentage": (
+                round((hired / applicants * 100), 1) if applicants > 0 else 0.0
+            ),
         },
     ]
 
@@ -334,9 +335,11 @@ def get_job_categories(
         }
         return [
             {
-                "category": domain_labels.get(r["_id"], str(r["_id"]).capitalize())
-                if r["_id"]
-                else "General",
+                "category": (
+                    domain_labels.get(r["_id"], str(r["_id"]).capitalize())
+                    if r["_id"]
+                    else "General"
+                ),
                 "count": r["count"],
             }
             for r in results

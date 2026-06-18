@@ -1,8 +1,9 @@
-import os
 import json
-import requests
+import os
+from typing import Dict, List
+
 import fitz
-from typing import List, Dict
+import requests
 
 # Gemini API Endpoint URL
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"

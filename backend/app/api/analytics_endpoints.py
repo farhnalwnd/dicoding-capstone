@@ -1,5 +1,7 @@
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, Depends, Query
-from typing import List, Dict, Any, Optional
+
 from app.core.auth import require_role
 from app.services import analytics_service
 

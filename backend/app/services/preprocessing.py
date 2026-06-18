@@ -3,7 +3,6 @@ from typing import List
 
 from app.services.parser import clean_text
 
-
 # =====================================================
 # NORMALIZATION
 # =====================================================

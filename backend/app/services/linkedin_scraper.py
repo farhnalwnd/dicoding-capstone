@@ -1,8 +1,10 @@
+import random
+import time
+import urllib.parse
+
 import requests
 from bs4 import BeautifulSoup
-import time
-import random
-import urllib.parse
+
 from app.core.mongodb import get_jobs_collection as _get_jobs_collection
 
 # Use the shared MongoDB connection - the collection reference

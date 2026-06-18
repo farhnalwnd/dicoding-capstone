@@ -1,7 +1,9 @@
-from app.services.nlp import model, match_cv_jd_hybrid
-from sentence_transformers import util
 import os
 import sys
+
+from sentence_transformers import util
+
+from app.services.nlp import match_cv_jd_hybrid, model
 
 # Set path to backend folder so imports work
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))

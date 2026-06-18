@@ -1,37 +1,36 @@
+import asyncio
 import re
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Tuple
 
+from bson import ObjectId
 from fastapi import (
     APIRouter,
-    UploadFile,
+    BackgroundTasks,
+    Body,
+    Depends,
     File,
     Form,
-    Body,
-    BackgroundTasks,
-    Depends,
-    Path,
     HTTPException,
+    Path,
+    UploadFile,
 )
-from typing import List, Tuple, Dict, Any
 from pydantic import BaseModel, Field
+
 from app.core.auth import require_role
-from app.core.file_validation import validate_upload_file, sanitize_filename
-import time
-import asyncio
-from bson import ObjectId
-from datetime import datetime, timezone
-
-from app.services.parser import extract_text, extract_candidate_name, clean_text
-from app.services.nlp import (
-    get_similarity_score,
-    match_cv_jd_hybrid,
-    has_skill_exact,
-    extract_jd_target_skills,
-)
 from app.core.domain_loader import load_domain_config
+from app.core.file_validation import sanitize_filename, validate_upload_file
+from app.core.metrics import HR_RANKING_COUNT, REQUEST_COUNT, REQUEST_LATENCY
 from app.core.mongodb import get_candidates_collection, log_activity
-from app.core.metrics import REQUEST_COUNT, REQUEST_LATENCY, HR_RANKING_COUNT
+from app.services.nlp import (
+    extract_jd_target_skills,
+    get_similarity_score,
+    has_skill_exact,
+    match_cv_jd_hybrid,
+)
+from app.services.parser import clean_text, extract_candidate_name, extract_text
 from app.services.progress import progress_manager
-
 
 # --------------- Constants ---------------
 MAX_PERCENTAGE = 100.0

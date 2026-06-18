@@ -1,7 +1,8 @@
 import io
 import re
-from pypdf import PdfReader
+
 from docx import Document
+from pypdf import PdfReader
 
 STOPWORDS = {
     # --- 1. PREPOSISI & KATA HUBUNG STANDARD (English) ---

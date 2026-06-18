@@ -1,6 +1,6 @@
-from typing import List, Dict
-import numpy as np
+from typing import Dict, List
 
+import numpy as np
 from sklearn.metrics import ndcg_score
 
 RELEVANCE_THRESHOLD = 2

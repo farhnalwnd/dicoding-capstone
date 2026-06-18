@@ -1,8 +1,9 @@
-import re
 import os
+import re
+from typing import Any, Dict, List, Tuple
+
 from sentence_transformers import SentenceTransformer, util
 from sklearn.cluster import KMeans
-from typing import List, Dict, Any, Tuple
 
 from app.services.explainability import build_match_explanation
 

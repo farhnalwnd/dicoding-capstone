@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from typing import Any, Dict, List
+
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+
 from app.core.auth import get_current_user
 from app.services.resume_advisor_service import (
-    generate_advisor_recommendations,
     generate_advisor_pdf,
+    generate_advisor_recommendations,
 )
 
 router = APIRouter()

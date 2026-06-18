@@ -1,32 +1,34 @@
-from app.services.explainability import build_match_explanation
-from app.services.nlp import get_similarity_score, match_cv_jd_hybrid
-from app.services.progress import progress_manager
-import json
-from pydantic import BaseModel
-from fastapi.responses import StreamingResponse
-from fastapi import BackgroundTasks
-from fastapi import APIRouter, UploadFile, File, Form, Request, Depends
-from typing import Optional
 import asyncio
+import json
+import time
+from typing import Optional
+
+import torch
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sentence_transformers import util
 
 from app.core.auth import get_current_user
-from app.core.file_validation import validate_upload_file, sanitize_filename
-
-from app.services.parser import extract_text, extract_candidate_name, clean_text
-from app.services.nlp import analyze_cv_jd, model
-from app.services.linkedin_scraper import scrape_linkedin_jobs
-from app.core.mongodb import get_jobs_collection
-from sentence_transformers import util
-import torch
-import time
-
+from app.core.file_validation import sanitize_filename, validate_upload_file
 from app.core.metrics import (
+    MATCH_ANALYSIS_COUNT,
     REQUEST_COUNT,
     REQUEST_LATENCY,
-    MATCH_ANALYSIS_COUNT,
-    SEMANTIC_SEARCH_COUNT,
     SCRAPE_RECOMMEND_COUNT,
+    SEMANTIC_SEARCH_COUNT,
 )
+from app.core.mongodb import get_jobs_collection
+from app.services.explainability import build_match_explanation
+from app.services.linkedin_scraper import scrape_linkedin_jobs
+from app.services.nlp import (
+    analyze_cv_jd,
+    get_similarity_score,
+    match_cv_jd_hybrid,
+    model,
+)
+from app.services.parser import clean_text, extract_candidate_name, extract_text
+from app.services.progress import progress_manager
 
 MAX_PERCENTAGE = 100.0
 

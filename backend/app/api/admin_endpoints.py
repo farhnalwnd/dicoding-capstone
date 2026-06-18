@@ -3,9 +3,11 @@ Admin API Endpoints.
 All routes are protected by require_role("admin").
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pydantic import BaseModel
 from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+
 from app.core.auth import require_role
 from app.services import admin_service
 

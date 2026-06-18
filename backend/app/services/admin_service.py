@@ -6,16 +6,17 @@ Handles platform stats, user management, audit logs, system health, and AI usage
 """
 
 import os
-import requests
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
+import requests
 from bson import ObjectId
 
 from app.core.mongodb import (
-    get_users_collection,
-    get_candidates_collection,
     get_activity_collection,
     get_audit_logs_collection,
+    get_candidates_collection,
+    get_users_collection,
 )
 
 # Default service ports / URLs
