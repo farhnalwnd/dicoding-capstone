@@ -70,7 +70,7 @@ jobs:
         run: |
           pip install huggingface_hub
           # Download the model from the user's Hugging Face account
-          huggingface-cli download lord-amir26/bi-encoder-cv-matcher --local-dir models/bi-encoder-cv-matcher
+          hf download lord-amir26/bi-encoder-cv-matcher --local-dir models/bi-encoder-cv-matcher
       - name: Run model validation
         run: |
           cd backend
