@@ -368,7 +368,8 @@ jupyter notebook notebooks/04_training_and_eval.ipynb
 *   **Database**: MongoDB, Mongo Express
 *   **Monitoring**: Prometheus, Grafana
 *   **MLops**: MLflow
-*   **DevOps**: Docker, Docker Compose, GitHub Actions (CI)
+*   **DevOps**: Docker, Docker Compose, GitHub Actions (CI/CD)
+*   **Deployment**: Cloudflare Pages, Hugging Face Spaces, MongoDB Atlas
 *   **Testing**: Pytest, Pytest-Cov, Pytest-Asyncio, HTTPX
 
 ---
@@ -406,6 +407,42 @@ Once deployed, the following services are available:
 | **Prometheus Dashboard** | [http://localhost:9090](http://localhost:9090) | *None* |
 | **Grafana Dashboard** | [http://localhost:3050](http://localhost:3050) | Username: `admin` \| Password: `admin` |
 | **MLflow Server (Local)** | [http://localhost:5000](http://localhost:5000) | *None* |
+
+---
+
+## 🌐 Production Deployment
+
+**🔗 Live URL: [https://hirezy.dev](https://hirezy.dev)**
+
+HIREZY is deployed using a modern, serverless PaaS architecture optimized for cost efficiency and scalability:
+
+| Component | Platform | Details |
+| :--- | :--- | :--- |
+| **Frontend** | Cloudflare Pages | Auto-deployed from GitHub on every push. Served via Cloudflare's global CDN with automatic SSL. |
+| **Backend API** | Hugging Face Spaces (Docker) | Runs the FastAPI server with 16GB RAM for ML model inference. Auto-deployed via GitHub Actions. |
+| **Database** | MongoDB Atlas (M0 Free Tier) | Cloud-hosted NoSQL database with 512MB storage. |
+| **Fine-Tuned Model** | Hugging Face Hub | Hosted at [`lord-amir26/bi-encoder-cv-matcher`](https://huggingface.co/lord-amir26/bi-encoder-cv-matcher). |
+| **Domain & DNS** | Cloudflare | Custom domain `hirezy.dev` with proxied DNS and automatic SSL/TLS. |
+
+### Deployment Architecture
+
+```mermaid
+graph LR
+    USER["🌍 User"] -->|HTTPS| CF["☁️ Cloudflare CDN"]
+    CF -->|Static Files| FE["📄 Cloudflare Pages<br/>(Vue 3 Frontend)"]
+    CF -->|API Requests| HF["🤗 Hugging Face Spaces<br/>(FastAPI Backend)"]
+    HF -->|Read/Write| DB[("🍃 MongoDB Atlas")]
+    HF -->|Load Model| MODEL["🧠 Fine-Tuned Bi-Encoder"]
+```
+
+### CI/CD Pipeline
+
+The project uses two GitHub Actions workflows for continuous integration and deployment:
+
+1. **`backend.yml`** — Runs on every push: Linting (flake8, black, isort) → Unit Tests (46 tests with coverage) → Docker Build Validation → Model Validation.
+2. **`deploy-hf.yml`** — Triggered on backend changes: Automatically pushes the `backend/` folder to Hugging Face Spaces via `git subtree`.
+
+Cloudflare Pages is connected directly to the GitHub repository and auto-deploys the frontend on every push.
 
 ---
 
