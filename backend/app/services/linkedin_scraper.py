@@ -7,8 +7,7 @@ from bs4 import BeautifulSoup
 
 from app.core.mongodb import get_jobs_collection as _get_jobs_collection
 
-# Use the shared MongoDB connection - the collection reference
-jobs_collection = _get_jobs_collection()
+# Collection will be fetched lazily inside the function
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",  # noqa: E501
@@ -124,6 +123,7 @@ def scrape_linkedin_jobs(keyword: str, location: str, time_range: str = "1w"):
                 }
 
                 # Upsert based on URL to prevent duplicates
+                jobs_collection = _get_jobs_collection()
                 jobs_collection.update_one(
                     {"url": job_url}, {"$set": job_data}, upsert=True
                 )
