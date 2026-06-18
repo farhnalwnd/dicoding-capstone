@@ -18,13 +18,23 @@ from app.core.mongodb import get_users_collection
 # Configuration
 # ====================================
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError(
-        "JWT_SECRET_KEY environment variable is required. Set it before starting the server."
-    )
+_SECRET_KEY = None
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
+
+
+def _get_secret_key() -> str:
+    """Lazy-load JWT_SECRET_KEY so the module can be imported without it."""
+    global _SECRET_KEY
+    if _SECRET_KEY is None:
+        _SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+        if not _SECRET_KEY:
+            raise RuntimeError(
+                "JWT_SECRET_KEY environment variable is required. "
+                "Set it before starting the server."
+            )
+    return _SECRET_KEY
+
 
 # ====================================
 # Password Hashing
@@ -55,13 +65,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, _get_secret_key(), algorithm=ALGORITHM)
 
 
 def decode_access_token(token: str) -> dict:
     """Decode and verify a JWT access token. Raises HTTPException on failure."""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, _get_secret_key(), algorithms=[ALGORITHM])
         return payload
     except JWTError:
         raise HTTPException(
