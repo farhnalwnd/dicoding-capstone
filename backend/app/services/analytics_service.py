@@ -84,7 +84,7 @@ def _build_period_query(
 
 def _format_trend_percentage(curr_count: int, prev_count: int) -> str:
     """Format a trend percentage string from two period counts.
-    
+
     - If previous period had 0 records and current has some, return 'New'
       (avoids misleading +14800% style numbers).
     - Caps displayed percentage at ±999% to keep UI readable.

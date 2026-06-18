@@ -168,7 +168,7 @@ def _extract_job_title(job_description: str) -> str:
 
 def _save_ranked_candidates(candidates: list, job_title: str, log_fn=None):
     """Assign ranks, persist candidates to DB, and optionally log activity.
-    
+
     Duplicate detection: a candidate is considered a duplicate if the same
     filename was already uploaded for the same job_title. Duplicates are
     skipped (not re-inserted) and the existing document ID is reused.
