@@ -1,0 +1,29 @@
+{
+  "domain": "General",
+  "threshold_direct_match": 0.75,
+  "threshold_master_match": 0.77,
+  "skills": [
+    "Microsoft Office", "Word", "Excel", "PowerPoint",
+    "Communication", "Teamwork", "Problem Solving", "Time Management",
+    "Adaptability", "Leadership", "Organization", "Work Ethic"
+  ],
+  "roles": [
+    "Staff", "Coordinator", "Officer", "Assistant", "Administrator"
+  ],
+  "teams": [
+    "General", "Administration", "Management"
+  ],
+  "projects": [
+    "office administrative overhaul", "team coordination framework",
+    "reporting workflow improvement", "task management coordination"
+  ],
+  "unrelated_industries": ["Heavy Machinery", "Oil & Gas", "Mining", "Semiconductor"],
+  "unrelated_roles": ["DevOps Engineer", "Mechanical Engineer", "Embedded System Engineer"],
+  "unrelated_tools": ["Docker", "Kubernetes", "MATLAB", "CAD", "Maven"],
+  "experience_keywords": [
+    "years of experience", "pengalaman kerja"
+  ],
+  "education_keywords": [
+    "bachelor", "master", "degree", "sarjana", "magister", "diploma"
+  ]
+}

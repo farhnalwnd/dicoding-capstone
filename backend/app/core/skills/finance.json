@@ -1,0 +1,34 @@
+{
+  "domain": "Finance",
+  "threshold_direct_match": 0.75,
+  "threshold_master_match": 0.77,
+  "skills": [
+    "Financial Analysis", "Budgeting", "Forecasting",
+    "Accounting", "Taxation", "Corporate Finance",
+    "Risk Management", "Cash Flow Management",
+    "SAP FI/CO", "Excel", "PowerBI", "Data Modeling"
+  ],
+  "roles": [
+    "Finance Manager", "Accountant", "Financial Analyst",
+    "Tax Specialist", "Budget Controller", "Internal Auditor"
+  ],
+  "teams": [
+    "Finance", "Accounting", "Treasury", "Taxation", "Audit"
+  ],
+  "projects": [
+    "annual budget plan", "financial audit", "tax reporting",
+    "cost optimization analysis", "investment portfolio evaluation",
+    "cash flow forecasting model"
+  ],
+  "unrelated_industries": ["Entertainment", "Creative Design", "Gaming", "Social Media"],
+  "unrelated_roles": ["UI/UX Designer", "Copywriter", "Video Editor", "Art Director", "Frontend Developer"],
+  "unrelated_tools": ["Figma", "Photoshop", "Premiere Pro", "Kubernetes", "VS Code"],
+  "experience_keywords": [
+    "years of finance experience", "pengalaman keuangan",
+    "financial reporting", "laporan keuangan"
+  ],
+  "education_keywords": [
+    "bachelor", "master", "degree", "sarjana", "magister",
+    "accounting", "finance", "akuntansi"
+  ]
+}

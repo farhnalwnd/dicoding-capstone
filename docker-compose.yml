@@ -8,6 +8,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db
+      - mongo_config:/data/configdb
 
   mongo-express:
     image: mongo-express
@@ -30,12 +31,18 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./models:/app/models
       - hf_cache:/root/.cache/huggingface
     environment:
       - PYTHONUNBUFFERED=1
       - MONGO_URI=mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/
       - MODEL_MAIN=${MODEL_MAIN}
+      - MODEL_BI_ENCODER=${MODEL_BI_ENCODER}
       - HF_HOME=/root/.cache/huggingface
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     depends_on:
       - mongodb
 
@@ -44,15 +51,51 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT}:5173"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - caps_fe_data:/app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
     depends_on:
       - backend
 
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+
+    ports:
+      - "3050:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+    depends_on:
+      - prometheus
+  
 volumes:
   mongo_data:
+    driver: local
+  caps_fe_data:
+    driver: local
+  mongo_config:
+    driver: local
   hf_cache:
+    driver: local
+  grafana_data:
+    driver: local
+

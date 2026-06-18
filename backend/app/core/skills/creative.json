@@ -1,0 +1,34 @@
+{
+  "domain": "Creative & Marketing",
+  "threshold_direct_match": 0.70,
+  "threshold_master_match": 0.72,
+  "skills": [
+    "Photoshop", "Illustrator", "Figma", "UI/UX", "Video Editing",
+    "Copywriting", "SEO", "Social Media Marketing", "Content Strategy",
+    "Adobe Premiere", "After Effects", "Brand Identity",
+    "Digital Marketing", "Google Ads", "Facebook Ads"
+  ],
+  "roles": [
+    "Graphic Designer", "UI/UX Designer", "Copywriter",
+    "Content Creator", "Marketing Specialist", "Brand Manager"
+  ],
+  "teams": [
+    "Creative", "Marketing", "Brand Strategy", "UI/UX Design", "Social Media"
+  ],
+  "projects": [
+    "brand identity design", "social media campaign", "video production",
+    "content strategy", "UI/UX redesign", "marketing campaign",
+    "packaging design", "SEO optimization"
+  ],
+  "unrelated_industries": ["Heavy Machinery", "Oil & Gas", "Agriculture", "Legal Services"],
+  "unrelated_roles": ["Backend Developer", "Network Engineer", "Accountant", "Legal Counsel"],
+  "unrelated_tools": ["Docker", "Kubernetes", "SQL", "Git", "Maven"],
+  "experience_keywords": [
+    "creative portfolio", "digital marketing experience",
+    "pengalaman kreatif", "portofolio desain"
+  ],
+  "education_keywords": [
+    "bachelor", "degree", "sarjana", "dkv",
+    "desain komunikasi visual", "marketing", "komunikasi"
+  ]
+}

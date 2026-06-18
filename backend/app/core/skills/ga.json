@@ -1,0 +1,34 @@
+{
+  "domain": "GA",
+  "threshold_direct_match": 0.70,
+  "threshold_master_match": 0.72,
+  "skills": [
+    "General Affairs", "Office Management", "Facilities Management",
+    "Asset Management", "Vendor Management", "Procurement",
+    "Inventory Management", "Fleet Management", "Security Operations",
+    "Catering & Cleaning Coordination", "Permits & Licensing", "Budgeting"
+  ],
+  "roles": [
+    "GA Manager", "Office Administrator", "Facilities Coordinator",
+    "Procurement Officer", "Asset Manager"
+  ],
+  "teams": [
+    "General Affairs", "Facilities", "Procurement", "Administration"
+  ],
+  "projects": [
+    "office relocation project", "vendor contract renewal",
+    "fleet management upgrade", "facility renovation",
+    "procurement process improvement", "security system overhaul"
+  ],
+  "unrelated_industries": ["Software Development", "Creative Media", "Oil & Gas", "Mining"],
+  "unrelated_roles": ["Software Engineer", "Graphic Designer", "Marketing Manager", "Data Scientist"],
+  "unrelated_tools": ["Python", "Photoshop", "Premiere Pro", "Figma", "SQL"],
+  "experience_keywords": [
+    "years of GA experience", "pengalaman GA",
+    "general affairs management", "pengelolaan GA"
+  ],
+  "education_keywords": [
+    "bachelor", "degree", "sarjana", "diploma",
+    "business administration", "management", "administrasi perkantoran"
+  ]
+}

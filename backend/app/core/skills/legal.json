@@ -1,0 +1,35 @@
+{
+  "domain": "Legal",
+  "threshold_direct_match": 0.78,
+  "threshold_master_match": 0.80,
+  "skills": [
+    "Legal Research", "Contract Drafting", "Corporate Law",
+    "Litigation", "Intellectual Property", "Employment Law",
+    "Compliance", "Risk Assessment", "Due Diligence",
+    "Legal Writing", "Case Management", "Document Review",
+    "Regulatory Affairs", "Legal Advisory"
+  ],
+  "roles": [
+    "Legal Counsel", "Corporate Lawyer", "Legal Assistant",
+    "Compliance Officer", "Paralegal"
+  ],
+  "teams": [
+    "Legal", "Compliance", "Corporate Secretariat"
+  ],
+  "projects": [
+    "contract lifecycle management setup", "regulatory compliance audit",
+    "M&A due diligence check", "employee policy review",
+    "corporate restructuring legal review", "intellectual property registration"
+  ],
+  "unrelated_industries": ["Creative Design", "Gaming", "Food & Beverage", "E-Commerce Marketing"],
+  "unrelated_roles": ["Video Editor", "Graphic Designer", "SEO Specialist", "Social Media Admin"],
+  "unrelated_tools": ["Photoshop", "Premiere Pro", "Figma", "Canva", "Google Ads"],
+  "experience_keywords": [
+    "years of legal experience", "pengalaman legal",
+    "legal practice", "praktik hukum"
+  ],
+  "education_keywords": [
+    "bachelor", "master", "degree", "sarjana", "magister",
+    "law", "hukum", "juris doctor"
+  ]
+}

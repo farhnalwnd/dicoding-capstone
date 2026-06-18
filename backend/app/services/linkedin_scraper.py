@@ -102,8 +102,12 @@ def scrape_linkedin_jobs(keyword: str, location: str, time_range: str = "1w"):
                     # Fallback description
                     description = f"Looking for a qualified {title} to join {company} in {loc}. The ideal candidate has experience in software development, team collaboration, and relevant industry skills."
                 
+                # Clean job description before encoding to keep embeddings clean
+                from app.services.parser import clean_text
+                cleaned_desc = clean_text(description)
+                
                 # Generate dynamic description embedding for vector search
-                description_embedding = model.encode(description).tolist()
+                description_embedding = model.encode(cleaned_desc).tolist()
                 
                 job_data = {
                     "title": title,
