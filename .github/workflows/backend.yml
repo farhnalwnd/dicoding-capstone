@@ -61,10 +61,9 @@ jobs:
       - name: Validate Docker Compose
         run: docker compose config
 
-  # === JOB 4: Model Validation (Triggered Manually) ===
+  # === JOB 4: Model Validation ===
   model-validation:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - name: Download fine-tuned model
