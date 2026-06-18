@@ -2,39 +2,54 @@ import os
 
 from pymongo import MongoClient
 
-MONGO_URI = os.getenv("MONGO_URI")
-if not MONGO_URI:
-    raise RuntimeError(
-        "MONGO_URI environment variable is required. Set it before starting the server."
-    )
-client = MongoClient(MONGO_URI)
-db = client.cv_matcher
+_client = None
+_db = None
+
+
+def _get_db():
+    """Lazy-connect to MongoDB.
+
+    The connection is deferred until the first collection accessor is called,
+    so the module can be imported safely in environments without a real
+    MONGO_URI (e.g. CI test runners that mock the database layer).
+    """
+    global _client, _db
+    if _db is None:
+        uri = os.getenv("MONGO_URI")
+        if not uri:
+            raise RuntimeError(
+                "MONGO_URI environment variable is required. "
+                "Set it before starting the server."
+            )
+        _client = MongoClient(uri)
+        _db = _client.cv_matcher
+    return _db
 
 
 def get_jobs_collection():
-    return db.linkedin_jobs
+    return _get_db().linkedin_jobs
 
 
 def get_users_collection():
     """Get the users collection with a unique index on email."""
-    collection = db.users
+    collection = _get_db().users
     collection.create_index("email", unique=True)
     return collection
 
 
 def get_candidates_collection():
     """Get the candidates collection for Talent Pool Management."""
-    return db.candidates
+    return _get_db().candidates
 
 
 def get_activity_collection():
     """Get the activity log collection for Recruitment Analytics."""
-    return db.activity_log
+    return _get_db().activity_log
 
 
 def get_audit_logs_collection():
     """Get the audit logs collection for Admin tracking."""
-    return db.audit_logs
+    return _get_db().audit_logs
 
 
 def log_activity(
