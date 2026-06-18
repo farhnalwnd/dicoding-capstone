@@ -92,13 +92,10 @@ volumes:
     driver: local
   caps_fe_data:
     driver: local
-
   mongo_config:
     driver: local
-
   hf_cache:
     driver: local
-
   grafana_data:
     driver: local
 
