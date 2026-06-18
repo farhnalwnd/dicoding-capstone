@@ -365,7 +365,9 @@ async def start_rank_candidates(
     return {"job_id": job_id}
 
 
-def _generate_gemini_interview_questions(job_title: str, matched_skills: list, missing_skills: list) -> list:
+def _generate_gemini_interview_questions(
+    job_title: str, matched_skills: list, missing_skills: list
+) -> list:
     """Generate tailored interview questions using Gemini API."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -380,7 +382,7 @@ def _generate_gemini_interview_questions(job_title: str, matched_skills: list, m
         "2. Question 2 should address their MISSING skills, asking how they would compensate or learn them.\n"
         "3. Question 3 should be a behavioral or situational question relevant to the role.\n\n"
         "Return the output strictly as a JSON array of strings, with no markdown formatting "
-        "or other text. Example: [\"Question 1\", \"Question 2\", \"Question 3\"]"
+        'or other text. Example: ["Question 1", "Question 2", "Question 3"]'
     )
 
     headers = {"Content-Type": "application/json"}
@@ -405,7 +407,7 @@ def _generate_gemini_interview_questions(job_title: str, matched_skills: list, m
             lines = text_content.split("\n")
             text_content = "\n".join(lines[1:-1])
 
-        questions = __import__('json').loads(text_content)
+        questions = __import__("json").loads(text_content)
         if isinstance(questions, list) and len(questions) > 0:
             return questions
         else:
@@ -415,7 +417,9 @@ def _generate_gemini_interview_questions(job_title: str, matched_skills: list, m
         return _build_fallback_interview_questions(matched_skills, missing_skills)
 
 
-def _build_fallback_interview_questions(matched_skills: list, missing_skills: list) -> list:
+def _build_fallback_interview_questions(
+    matched_skills: list, missing_skills: list
+) -> list:
     """Generate exactly 3 short, simple interview questions in Indonesian as fallback."""
     questions = []
 
@@ -453,7 +457,9 @@ def _build_fallback_interview_questions(matched_skills: list, missing_skills: li
 async def generate_interview_questions(
     req: QuestionRequest, current_user: dict = Depends(require_role("hr"))
 ):
-    questions = _generate_gemini_interview_questions("Unknown Position", req.matched_skills, req.missing_skills)
+    questions = _generate_gemini_interview_questions(
+        "Unknown Position", req.matched_skills, req.missing_skills
+    )
     return {"questions": questions}
 
 
@@ -632,11 +638,9 @@ async def generate_candidate_questions(
     # Call Gemini to generate tailored questions
     # Using asyncio.to_thread because requests.post is synchronous
     import asyncio
+
     questions = await asyncio.to_thread(
-        _generate_gemini_interview_questions,
-        job_title,
-        matched_skills,
-        missing_skills
+        _generate_gemini_interview_questions, job_title, matched_skills, missing_skills
     )
 
     candidates_col.update_one(
