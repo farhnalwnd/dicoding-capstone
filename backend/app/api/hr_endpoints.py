@@ -379,7 +379,8 @@ def _generate_gemini_interview_questions(job_title: str, matched_skills: list, m
         "1. Question 1 should probe their experience and depth in their MATCHED skills.\n"
         "2. Question 2 should address their MISSING skills, asking how they would compensate or learn them.\n"
         "3. Question 3 should be a behavioral or situational question relevant to the role.\n\n"
-        "Return the output strictly as a JSON array of strings, with no markdown formatting or other text. Example: [\"Question 1\", \"Question 2\", \"Question 3\"]"
+        "Return the output strictly as a JSON array of strings, with no markdown formatting "
+        "or other text. Example: [\"Question 1\", \"Question 2\", \"Question 3\"]"
     )
 
     headers = {"Content-Type": "application/json"}
@@ -398,12 +399,12 @@ def _generate_gemini_interview_questions(job_title: str, matched_skills: list, m
         response.raise_for_status()
         res_json = response.json()
         text_content = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-        
+
         # Clean markdown
         if text_content.startswith("```"):
             lines = text_content.split("\n")
             text_content = "\n".join(lines[1:-1])
-            
+
         questions = __import__('json').loads(text_content)
         if isinstance(questions, list) and len(questions) > 0:
             return questions
