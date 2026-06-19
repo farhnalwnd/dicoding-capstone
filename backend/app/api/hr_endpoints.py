@@ -1,9 +1,10 @@
 import asyncio
+import os
 import re
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
-import os
+
 import requests
 
 from bson import ObjectId
@@ -637,8 +638,6 @@ async def generate_candidate_questions(
     job_title = candidate.get("job_title", "Unknown Position")
     # Call Gemini to generate tailored questions
     # Using asyncio.to_thread because requests.post is synchronous
-    import asyncio
-
     questions = await asyncio.to_thread(
         _generate_gemini_interview_questions, job_title, matched_skills, missing_skills
     )
