@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 import requests
-
 from bson import ObjectId
 from fastapi import (
     APIRouter,
